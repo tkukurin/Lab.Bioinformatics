@@ -8,7 +8,6 @@ import lombok.Value;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class MappingRead {
 
@@ -50,29 +49,32 @@ public class MappingRead {
     }
 
     public List<IndexJaccardPair> stage2(
-            ImmutableList<Hash> index,
+            ImmutableList<Hash> hashesInIndex,
+            ImmutableList<Hash> hashesInRead,
             ImmutableList<CandidateRegion> candidateRegions,
             double tau) {
-        List<CandidateRegion> candidateRegions1 = new LinkedList<>(candidateRegions);
         List<IndexJaccardPair> result = new ArrayList<>();
-        Map<Hash, Integer> hashToAppearanceInBothReads = candidateRegions.stream()
-                .collect(Collectors.toMap())
+        Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream()
+                .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
         for (CandidateRegion candidateRegion : candidateRegions) {
             int i = candidateRegion.getLow();
             int j = candidateRegion.getHigh();
 
-            candidateRegions1.add(getMinimizers(index, i, j));
-            double jaccard = solveJaccard(candidateRegions1);
+            getMinimizers(hashesInIndex, i, j).forEach(
+                    hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
+            double jaccard = solveJaccard(hashToAppearanceInBothReads);
 
             if (jaccard >= tau) {
                 result.add(new IndexJaccardPair(i, jaccard));
             }
 
             for (; i < candidateRegion.getHigh(); i++, j++) {
-                // TODO delete from candidateregions1
-                // TODO insert into candidateregions1
-                jaccard = solveJaccard(candidateRegions1);
+                getMinimizers(hashesInIndex, i, i + 1).forEach(
+                        hash -> hashToAppearanceInBothReads.compute(hash, (k, v) -> v == 1 ? 0 : null));
+                getMinimizers(hashesInIndex, j, j + 1).forEach(
+                        hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
+                jaccard = solveJaccard(hashToAppearanceInBothReads);
                 if (jaccard >= tau) {
                     result.add(new IndexJaccardPair(i, jaccard));
                 }
@@ -82,12 +84,13 @@ public class MappingRead {
         return result;
     }
 
-    // TODO some other parameter is necessary.
-    private CandidateRegion getMinimizers(ImmutableList<Hash> index, int low, int high) {
-        return index.stream().skip(low).limit(high - low + 1).collect();
+    private List<Hash> getMinimizers(List<Hash> index, int lowInclusive, int highExclusive) {
+        return index.stream().skip(lowInclusive)
+                .limit(highExclusive - lowInclusive)
+                .collect(Collectors.toList());
     }
 
-    private double solveJaccard(ImmutableMap<Hash, Integer> hashToAppearance) {
+    private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
         return 1.0 * hashToAppearance.values().stream().mapToInt(i -> i).sum() / hashToAppearance.size();
     }
 }
