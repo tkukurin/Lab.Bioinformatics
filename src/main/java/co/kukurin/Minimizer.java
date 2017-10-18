@@ -1,10 +1,10 @@
 package co.kukurin;
 
+import co.kukurin.model.Hash;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -14,18 +14,17 @@ public class Minimizer {
     @Value
     public static class MinimizerValue {
         private final int index;
-        private final long value;
+        private final Hash value;
     }
 
     private final int windowSize;
 
-    public List<MinimizerValue> minimize(List<Long> hashes) {
-        TreeMap<Long, Integer> valueToLargestIndex = new TreeMap<>();
+    public List<MinimizerValue> minimize(List<Hash> hashes) {
+        TreeMap<Hash, Integer> valueToLargestIndex = new TreeMap<>();
         List<MinimizerValue> minimizers = new ArrayList<>();
 
         for (int i = 0; i < windowSize; i++) {
-            long current = hashes.get(i);
-            valueToLargestIndex.put(current, i);
+            valueToLargestIndex.put(hashes.get(i), i);
         }
 
         for (int i = windowSize; i < hashes.size(); i++) {
@@ -44,16 +43,10 @@ public class Minimizer {
         return minimizers;
     }
 
-    private MinimizerValue extractSmallestMinimizer(TreeMap<Long, Integer> valueToLargestIndex) {
-        long smallestValueInWindow = valueToLargestIndex.firstKey();
+    private MinimizerValue extractSmallestMinimizer(TreeMap<Hash, Integer> valueToLargestIndex) {
+        Hash smallestValueInWindow = valueToLargestIndex.firstKey();
         int indexForSmallestValue = valueToLargestIndex.get(smallestValueInWindow);
         return new MinimizerValue(indexForSmallestValue, smallestValueInWindow);
-    }
-
-    public static void main(String[] args) {
-        Minimizer minimizer = new Minimizer(2);
-        List<MinimizerValue> minimizerValues = minimizer.minimize(Arrays.asList(2L, 2L, 3L, 8L));
-        minimizerValues.forEach(System.out::println);
     }
 
 }

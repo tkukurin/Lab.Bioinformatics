@@ -1,32 +1,33 @@
 package co.kukurin;
 
 import co.kukurin.model.Hash;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import lombok.Value;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MappingRead {
 
     @Value
-    private class CandidateRegion {
+    public static class CandidateRegion {
         private int low;
         private int high;
 
     }
 
     @Value
-    private class IndexJaccardPair {
+    public static class IndexJaccardPair {
         private int index;
         private double jaccardSimilarity;
     }
 
     public List<CandidateRegion> stage1(
-            ImmutableList<Hash> readHashes,
-            ImmutableMap<Hash, Integer> hashToIndexInReferenceRead,
+            List<Hash> readHashes,
+            Map<Hash, Integer> hashToIndexInReferenceRead,
             int sketchSize,
             double tau) {
 
@@ -49,9 +50,9 @@ public class MappingRead {
     }
 
     public List<IndexJaccardPair> stage2(
-            ImmutableList<Hash> hashesInIndex,
-            ImmutableList<Hash> hashesInRead,
-            ImmutableList<CandidateRegion> candidateRegions,
+            List<Hash> hashesInIndex,
+            List<Hash> hashesInRead,
+            List<CandidateRegion> candidateRegions,
             double tau) {
         List<IndexJaccardPair> result = new ArrayList<>();
         Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream()

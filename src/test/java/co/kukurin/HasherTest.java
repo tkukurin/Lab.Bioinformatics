@@ -1,5 +1,6 @@
 package co.kukurin;
 
+import co.kukurin.model.Hash;
 import org.junit.Test;
 
 import java.util.List;
@@ -13,7 +14,7 @@ public class HasherTest {
         Hasher hasher = new Hasher(3);
 
         // when
-        List<Long> result = hasher.hash(toHash);
+        List<Hash> result = hasher.hash(toHash);
 
         // then
         System.out.println(result);

@@ -1,27 +1,53 @@
 package co.kukurin;
 
-import com.google.common.io.ByteStreams;
-import org.rabinfingerprint.fingerprint.RabinFingerprintLong;
-import org.rabinfingerprint.polynomial.Polynomial;
+import co.kukurin.MappingRead.CandidateRegion;
+import co.kukurin.MappingRead.IndexJaccardPair;
+import co.kukurin.Minimizer.MinimizerValue;
+import co.kukurin.model.Hash;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Main {
 
     public static void main(String[] args) throws IOException {
-        // Create new random irreducible polynomial
-        // These can also be created from Longs or hex Strings
-        Polynomial polynomial = Polynomial.createIrreducible(53);
+        String referenceRead = "ATTCGATCGATTACGATTCGATCGATTACGATTCGATCGATTACGATTCGATCGATTACG";
+        String subread = "CGATT";
 
-        // Create a fingerprint object
-        RabinFingerprintLong rabin = new RabinFingerprintLong(polynomial);
+        ParameterSupplier parameterSupplier = new ParameterSupplier(2, 4, 2, 0.15);
+        Hasher hasher = new Hasher(parameterSupplier.getKmerSize());
+        Minimizer minimizer = new Minimizer(parameterSupplier.getWindowSize());
+        Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
+        MappingRead mappingRead = new MappingRead();
 
-        // Push bytes from a file stream
-        rabin.pushBytes(ByteStreams.toByteArray(new FileInputStream("file.test")));
+        List<Hash> indexHash = hasher.hash(referenceRead);
+        Map<Hash, Integer> hashToIndexInRead = inverse(indexHash);
+        List<Hash> readHash = hasher.hash(subread);
 
-        // Get fingerprint value and output
-        System.out.println(Long.toString(rabin.getFingerprintLong(), 16));
+        List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
+        List<MinimizerValue> sketches = sketcher.sketch(minimizerValues);
+
+        List<CandidateRegion> candidateRegions = mappingRead.stage1(
+                sketches.stream().map(MinimizerValue::getValue).collect(Collectors.toList()),
+                hashToIndexInRead,
+                parameterSupplier.getSketchSize(),
+                0.02);
+
+        List<IndexJaccardPair> result = mappingRead.stage2(
+                indexHash, readHash, candidateRegions, 0.02);
+
+        result.forEach(System.out::println);
+    }
+
+    private static Map<Hash, Integer> inverse(List<Hash> indexHash) {
+        Map<Hash, Integer> result = new HashMap<>();
+        for (int i = 0; i < indexHash.size(); i++) {
+            result.put(indexHash.get(i), i);
+        }
+        return result;
     }
 
 }
