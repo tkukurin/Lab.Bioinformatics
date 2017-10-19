@@ -29,7 +29,6 @@ public class ReadMapper {
     public List<CandidateRegion> collectCandidateRegions(
             List<Hash> readHashes,
             Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
-
         int m = (int) Math.ceil(sketchSize * tau);
         List<Integer> indicesInReference =
                 readHashes.stream()
