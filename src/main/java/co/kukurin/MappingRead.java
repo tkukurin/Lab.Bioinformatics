@@ -3,10 +3,7 @@ package co.kukurin;
 import co.kukurin.model.Hash;
 import lombok.Value;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,14 +24,17 @@ public class MappingRead {
 
     public List<CandidateRegion> collectCandidateRanges(
             List<Hash> readHashes,
-            Map<Hash, Integer> hashToIndexInReferenceRead,
+            Map<Hash, Collection<Integer>> hashToIndexInReferenceRead,
             int sketchSize,
             double tau) {
 
         int m = (int) Math.ceil(sketchSize * tau);
         List<Integer> indicesInReference =
-                readHashes.stream().map(hashToIndexInReferenceRead::get).sorted()
-                    .collect(Collectors.toList());
+                readHashes.stream()
+                        .filter(hashToIndexInReferenceRead::containsKey)
+                        .flatMap(val -> hashToIndexInReferenceRead.get(val).stream())
+                        .sorted()
+                        .collect(Collectors.toList());
         List<CandidateRegion> result = new LinkedList<>();
 
         for (int i = 0; i < indicesInReference.size() - m; i++) {
@@ -55,7 +55,8 @@ public class MappingRead {
             List<CandidateRegion> candidateRegions,
             double tau) {
         List<IndexJaccardPair> result = new ArrayList<>();
-        Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream()
+        // TODO check what to do with multiple equal hashes.
+        Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream().distinct()
                 .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
         for (CandidateRegion candidateRegion : candidateRegions) {
