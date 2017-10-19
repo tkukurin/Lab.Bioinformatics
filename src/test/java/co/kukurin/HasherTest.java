@@ -1,6 +1,7 @@
 package co.kukurin;
 
 import org.junit.Test;
+import org.rabinfingerprint.polynomial.Polynomial;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class HasherTest {
     public void twoWindows_euqalContents_shouldHashEqual() throws Exception {
         // given
         String toHash = "AAAA";
-        Hasher hasher = new Hasher(3);
+        Hasher hasher = new Hasher(Polynomial.createIrreducible(52), 3);
 
         // when
         List<Hasher.Hash> result = hasher.hash(toHash);
@@ -28,7 +29,7 @@ public class HasherTest {
     public void threeWindows_differentContents_shouldHashDifferent() throws Exception {
         // given
         String toHash = "AAABC";
-        Hasher hasher = new Hasher(3);
+        Hasher hasher = new Hasher(Polynomial.createIrreducible(5), 3);
 
         // when
         List<Hasher.Hash> result = hasher.hash(toHash);
