@@ -30,24 +30,35 @@ public class ReadMapper {
             List<Hash> readHashes,
             Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
         int m = (int) Math.ceil(sketchSize * tau);
-        List<Integer> indicesInReference =
+        List<Integer> sortedIndicesInReference =
                 readHashes.stream()
                         .filter(hashToReferenceReadIndices::containsKey)
                         .flatMap(val -> hashToReferenceReadIndices.get(val).stream())
                         .sorted()
                         .collect(Collectors.toList());
-        List<CandidateRegion> result = new LinkedList<>();
+        Stack<CandidateRegion> result = new Stack<>();
 
-        for (int i = 0; i < indicesInReference.size() - m; i++) {
+        for (int i = 0; i < sortedIndicesInReference.size() - m; i++) {
             int j = i + (m - 1);
-            int indexJ = indicesInReference.get(j);
-            int indexI = indicesInReference.get(i);
+            int indexJ = sortedIndicesInReference.get(j);
+            int indexI = sortedIndicesInReference.get(i);
             if (indexJ - indexI <= readHashes.size()) {
-                result.add(new CandidateRegion(indexJ - readHashes.size() + 1, indexI));
+                int low = indexJ - readHashes.size() + 1;
+                int high = indexI;
+
+                if (!result.isEmpty() && overlaps(result.peek(), low)) {
+                    low = result.pop().getLow();
+                }
+
+                result.add(new CandidateRegion(low, high));
             }
         }
 
         return result;
+    }
+
+    private boolean overlaps(CandidateRegion region, int low) {
+        return region.getHigh() >= low;
     }
 
     public List<IndexJaccardPair> collectLikelySimilarRegions(
