@@ -21,12 +21,12 @@ public class Hasher {
         }
     }
 
+    private final Polynomial hashingPolynomial;
     private final int kmerSize;
 
     public List<Hash> hash(String read) {
-        Polynomial polynomial = Polynomial.createIrreducible(53);
         RabinFingerprintLongWindowed rabinFingerprintLongWindowed =
-                new RabinFingerprintLongWindowed(polynomial, kmerSize);
+                new RabinFingerprintLongWindowed(hashingPolynomial, kmerSize);
         List<Hash> result = new ArrayList<>(read.length() - kmerSize + 1);
 
         if (kmerSize > read.length()) {

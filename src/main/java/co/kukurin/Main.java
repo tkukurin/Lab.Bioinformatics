@@ -5,6 +5,7 @@ import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import org.rabinfingerprint.polynomial.Polynomial;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -21,13 +22,15 @@ public class Main {
         String subread = "neki document";
 
         ParameterSupplier parameterSupplier = ParameterSupplier.builder()
+                .polynomial(Polynomial.createIrreducible(53))
                 .sketchSize(5)
                 .windowSize(3)
                 .kmerSize(2)
                 .epsilon(0.15)
                 .tau(0.1)
                 .build();
-        Hasher hasher = new Hasher(parameterSupplier.getKmerSize());
+        Hasher hasher = new Hasher(
+                parameterSupplier.getPolynomial(), parameterSupplier.getKmerSize());
         Minimizer minimizer = new Minimizer(parameterSupplier.getWindowSize());
         Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
         ReadMapper readMapper = new ReadMapper(
