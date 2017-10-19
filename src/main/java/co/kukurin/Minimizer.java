@@ -43,9 +43,9 @@ public class Minimizer {
         return minimizers;
     }
 
-    private MinimizerValue extractSmallestMinimizer(TreeMap<Hash, Integer> valueToLargestIndex) {
-        Hash smallestValueInWindow = valueToLargestIndex.firstKey();
-        int indexForSmallestValue = valueToLargestIndex.get(smallestValueInWindow);
+    private MinimizerValue extractSmallestMinimizer(TreeMap<Hash, Integer> hashToLargestIndex) {
+        Hash smallestValueInWindow = hashToLargestIndex.firstKey();
+        int indexForSmallestValue = hashToLargestIndex.get(smallestValueInWindow);
         return new MinimizerValue(indexForSmallestValue, smallestValueInWindow);
     }
 
