@@ -20,25 +20,25 @@ public class Minimizer {
     private final int windowSize;
 
     public List<MinimizerValue> minimize(List<Hash> hashes) {
-        TreeMap<Hash, Integer> valueToLargestIndex = new TreeMap<>();
+        TreeMap<Hash, Integer> hashToLargestIndex = new TreeMap<>();
         List<MinimizerValue> minimizers = new ArrayList<>();
 
         for (int i = 0; i < windowSize; i++) {
-            valueToLargestIndex.put(hashes.get(i), i);
+            hashToLargestIndex.put(hashes.get(i), i);
         }
 
         for (int i = windowSize; i < hashes.size(); i++) {
-            minimizers.add(extractSmallestMinimizer(valueToLargestIndex));
+            minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
 
             int deletionIndex = i - windowSize;
-            valueToLargestIndex.compute(
+            hashToLargestIndex.compute(
                     hashes.get(deletionIndex),
                     (key, largestIndex) ->
                             largestIndex == deletionIndex ? null : largestIndex);
-            valueToLargestIndex.put(hashes.get(i), i);
+            hashToLargestIndex.put(hashes.get(i), i);
         }
 
-        minimizers.add(extractSmallestMinimizer(valueToLargestIndex));
+        minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
 
         return minimizers;
     }
