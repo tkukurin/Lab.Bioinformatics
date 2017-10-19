@@ -1,8 +1,8 @@
 package co.kukurin;
 
+import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
-import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.model.Hash;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -35,7 +35,6 @@ public class Main {
                 parameterSupplier.getSketchSize(), parameterSupplier.getTau());
 
         List<Hash> indexHash = hasher.hash(referenceRead);
-        Map<Hash, Collection<Integer>> hashToReferenceReadIndices = inverse(indexHash);
         List<Hash> readHash = hasher.hash(subread);
 
         List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
@@ -43,7 +42,7 @@ public class Main {
 
         List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
                 sketches.stream().map(MinimizerValue::getValue).collect(Collectors.toList()),
-                hashToReferenceReadIndices);
+                inverse(indexHash));
 
         List<IndexJaccardPair> result = readMapper.collectLikelySimilarRegions(
                 indexHash, readHash, candidateRegions);
