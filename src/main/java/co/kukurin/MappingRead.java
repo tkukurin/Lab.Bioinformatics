@@ -25,7 +25,7 @@ public class MappingRead {
         private double jaccardSimilarity;
     }
 
-    public List<CandidateRegion> stage1(
+    public List<CandidateRegion> collectCandidateRanges(
             List<Hash> readHashes,
             Map<Hash, Integer> hashToIndexInReferenceRead,
             int sketchSize,
@@ -49,7 +49,7 @@ public class MappingRead {
         return result;
     }
 
-    public List<IndexJaccardPair> stage2(
+    public List<IndexJaccardPair> collectLikelySimilarRegions(
             List<Hash> hashesInIndex,
             List<Hash> hashesInRead,
             List<CandidateRegion> candidateRegions,

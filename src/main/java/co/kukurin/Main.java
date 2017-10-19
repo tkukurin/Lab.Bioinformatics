@@ -30,13 +30,13 @@ public class Main {
         List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
         List<MinimizerValue> sketches = sketcher.sketch(minimizerValues);
 
-        List<CandidateRegion> candidateRegions = mappingRead.stage1(
+        List<CandidateRegion> candidateRegions = mappingRead.collectCandidateRanges(
                 sketches.stream().map(MinimizerValue::getValue).collect(Collectors.toList()),
                 hashToIndexInRead,
                 parameterSupplier.getSketchSize(),
                 0.02);
 
-        List<IndexJaccardPair> result = mappingRead.stage2(
+        List<IndexJaccardPair> result = mappingRead.collectLikelySimilarRegions(
                 indexHash, readHash, candidateRegions, 0.02);
 
         result.forEach(System.out::println);
