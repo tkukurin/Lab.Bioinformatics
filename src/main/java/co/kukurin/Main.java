@@ -3,7 +3,6 @@ package co.kukurin;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
-import co.kukurin.model.Hash;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -34,8 +33,8 @@ public class Main {
         ReadMapper readMapper = new ReadMapper(
                 parameterSupplier.getSketchSize(), parameterSupplier.getTau());
 
-        List<Hash> indexHash = hasher.hash(referenceRead);
-        List<Hash> readHash = hasher.hash(subread);
+        List<Hasher.Hash> indexHash = hasher.hash(referenceRead);
+        List<Hasher.Hash> readHash = hasher.hash(subread);
 
         List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
         List<MinimizerValue> sketches = sketcher.sketch(minimizerValues);
@@ -55,10 +54,10 @@ public class Main {
         });
     }
 
-    private static Map<Hash, Collection<Integer>> inverse(List<Hash> indexHash) {
-        Multimap<Hash, Integer> result = ArrayListMultimap.create();
+    private static Map<Hasher.Hash, Collection<Integer>> inverse(List<Hasher.Hash> indexHash) {
+        Multimap<Hasher.Hash, Integer> result = ArrayListMultimap.create();
         for (int i = 0; i < indexHash.size(); i++) {
-            Hash hash = indexHash.get(i);
+            Hasher.Hash hash = indexHash.get(i);
             result.put(hash, i);
         }
         return result.asMap();

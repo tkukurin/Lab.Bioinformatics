@@ -1,7 +1,7 @@
 package co.kukurin;
 
-import co.kukurin.model.Hash;
 import lombok.AllArgsConstructor;
+import lombok.Value;
 import org.rabinfingerprint.fingerprint.RabinFingerprintLongWindowed;
 import org.rabinfingerprint.polynomial.Polynomial;
 
@@ -10,6 +10,16 @@ import java.util.List;
 
 @AllArgsConstructor
 public class Hasher {
+
+    @Value
+    public static class Hash implements Comparable<Hash> {
+        private long hash;
+
+        @Override
+        public int compareTo(Hash o) {
+            return Long.compare(hash, o.getHash());
+        }
+    }
 
     private final int kmerSize;
 
@@ -36,5 +46,4 @@ public class Hasher {
 
         return result;
     }
-
 }

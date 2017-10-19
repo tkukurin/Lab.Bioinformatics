@@ -1,6 +1,5 @@
 package co.kukurin;
 
-import co.kukurin.model.Hash;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
@@ -14,13 +13,13 @@ public class Minimizer {
     @Value
     public static class MinimizerValue {
         private final int index;
-        private final Hash value;
+        private final Hasher.Hash value;
     }
 
     private final int windowSize;
 
-    public List<MinimizerValue> minimize(List<Hash> hashes) {
-        TreeMap<Hash, Integer> valueToLargestIndex = new TreeMap<>();
+    public List<MinimizerValue> minimize(List<Hasher.Hash> hashes) {
+        TreeMap<Hasher.Hash, Integer> valueToLargestIndex = new TreeMap<>();
         List<MinimizerValue> minimizers = new ArrayList<>();
 
         for (int i = 0; i < windowSize; i++) {
@@ -43,8 +42,8 @@ public class Minimizer {
         return minimizers;
     }
 
-    private MinimizerValue extractSmallestMinimizer(TreeMap<Hash, Integer> valueToLargestIndex) {
-        Hash smallestValueInWindow = valueToLargestIndex.firstKey();
+    private MinimizerValue extractSmallestMinimizer(TreeMap<Hasher.Hash, Integer> valueToLargestIndex) {
+        Hasher.Hash smallestValueInWindow = valueToLargestIndex.firstKey();
         int indexForSmallestValue = valueToLargestIndex.get(smallestValueInWindow);
         return new MinimizerValue(indexForSmallestValue, smallestValueInWindow);
     }

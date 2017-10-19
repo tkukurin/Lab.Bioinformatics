@@ -1,7 +1,6 @@
 package co.kukurin;
 
 import co.kukurin.Minimizer.MinimizerValue;
-import co.kukurin.model.Hash;
 import org.junit.Test;
 
 import java.util.List;
@@ -16,8 +15,8 @@ public class MinimizerTest {
     public void uniqueValues_returnsSmallestInWindow() throws Exception {
         // given
         Minimizer minimizer = new Minimizer(2);
-        List<Hash> hashes = Stream.of(1L, 2L, 1L, 5L)
-                .map(Hash::new)
+        List<Hasher.Hash> hashes = Stream.of(1L, 2L, 1L, 5L)
+                .map(Hasher.Hash::new)
                 .collect(Collectors.toList());
 
         // when
@@ -34,8 +33,8 @@ public class MinimizerTest {
     public void multipleSmallest_returnsRightmostIndex() throws Exception {
         // given
         Minimizer minimizer = new Minimizer(2);
-        List<Hash> hashes = Stream.of(1L, 1L, 1L)
-                .map(Hash::new)
+        List<Hasher.Hash> hashes = Stream.of(1L, 1L, 1L)
+                .map(Hasher.Hash::new)
                 .collect(Collectors.toList());
 
         // when

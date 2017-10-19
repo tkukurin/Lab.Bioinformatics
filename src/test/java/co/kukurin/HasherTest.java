@@ -1,6 +1,5 @@
 package co.kukurin;
 
-import co.kukurin.model.Hash;
 import org.junit.Test;
 
 import java.util.List;
@@ -18,7 +17,7 @@ public class HasherTest {
         Hasher hasher = new Hasher(3);
 
         // when
-        List<Hash> result = hasher.hash(toHash);
+        List<Hasher.Hash> result = hasher.hash(toHash);
 
         // then
         assertEquals(2, result.size());
@@ -32,7 +31,7 @@ public class HasherTest {
         Hasher hasher = new Hasher(3);
 
         // when
-        List<Hash> result = hasher.hash(toHash);
+        List<Hasher.Hash> result = hasher.hash(toHash);
 
         // then
         assertEquals(3, result.size());

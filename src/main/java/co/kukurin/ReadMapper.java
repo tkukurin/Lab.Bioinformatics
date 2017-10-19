@@ -1,6 +1,5 @@
 package co.kukurin;
 
-import co.kukurin.model.Hash;
 import lombok.Value;
 
 import java.util.*;
@@ -27,8 +26,8 @@ public class ReadMapper {
     private final double tau;
 
     public List<CandidateRegion> collectCandidateRegions(
-            List<Hash> readHashes,
-            Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
+            List<Hasher.Hash> readHashes,
+            Map<Hasher.Hash, Collection<Integer>> hashToReferenceReadIndices) {
 
         int m = (int) Math.ceil(sketchSize * tau);
         List<Integer> indicesInReference =
@@ -52,11 +51,11 @@ public class ReadMapper {
     }
 
     public List<IndexJaccardPair> collectLikelySimilarRegions(
-            List<Hash> hashesInIndex,
-            List<Hash> hashesInRead,
+            List<Hasher.Hash> hashesInIndex,
+            List<Hasher.Hash> hashesInRead,
             List<CandidateRegion> candidateRegions) {
         List<IndexJaccardPair> result = new ArrayList<>();
-        Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream().distinct()
+        Map<Hasher.Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream().distinct()
                 .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
         for (CandidateRegion candidateRegion : candidateRegions) {
@@ -86,13 +85,13 @@ public class ReadMapper {
         return result;
     }
 
-    private List<Hash> getMinimizers(List<Hash> index, int lowInclusive, int highExclusive) {
+    private List<Hasher.Hash> getMinimizers(List<Hasher.Hash> index, int lowInclusive, int highExclusive) {
         return index.stream().skip(lowInclusive)
                 .limit(highExclusive - lowInclusive)
                 .collect(Collectors.toList());
     }
 
-    private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
+    private double solveJaccard(Map<Hasher.Hash, Integer> hashToAppearance) {
         return 1.0 * hashToAppearance.values().stream().mapToInt(i -> i).sum() / hashToAppearance.size();
     }
 }
