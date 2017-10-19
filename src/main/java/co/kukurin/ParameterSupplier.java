@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Getter;
 import org.rabinfingerprint.polynomial.Polynomial;
 
+import java.util.function.Function;
+
 @Builder
 @Getter
 public class ParameterSupplier {
@@ -11,8 +13,8 @@ public class ParameterSupplier {
     private final int sketchSize;
     private final int windowSize;
     private final int kmerSize;
-    private final double epsilon;
     private final double tau;
-    private final Polynomial polynomial;
-    
+    private final Polynomial fingerprintingPolynomial;
+    private final Function<String, byte[]> stringToByteArrayConverter;
+
 }

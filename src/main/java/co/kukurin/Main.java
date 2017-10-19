@@ -22,19 +22,24 @@ public class Main {
         String subread = "neki document";
 
         ParameterSupplier parameterSupplier = ParameterSupplier.builder()
-                .polynomial(Polynomial.createIrreducible(53))
+                .fingerprintingPolynomial(Polynomial.createIrreducible(53))
+                .stringToByteArrayConverter(String::getBytes)
                 .sketchSize(5)
                 .windowSize(3)
                 .kmerSize(2)
-                .epsilon(0.15)
                 .tau(0.1)
                 .build();
         Hasher hasher = new Hasher(
-                parameterSupplier.getPolynomial(), parameterSupplier.getKmerSize());
-        Minimizer minimizer = new Minimizer(parameterSupplier.getWindowSize());
-        Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
+                parameterSupplier.getFingerprintingPolynomial(),
+                parameterSupplier.getStringToByteArrayConverter(),
+                parameterSupplier.getKmerSize());
+        Minimizer minimizer = new Minimizer(
+                parameterSupplier.getWindowSize());
+        Sketcher sketcher = new Sketcher(
+                parameterSupplier.getSketchSize());
         ReadMapper readMapper = new ReadMapper(
-                parameterSupplier.getSketchSize(), parameterSupplier.getTau());
+                parameterSupplier.getSketchSize(),
+                parameterSupplier.getTau());
 
         List<Hasher.Hash> indexHash = hasher.hash(referenceRead);
         List<Hasher.Hash> readHash = hasher.hash(subread);
