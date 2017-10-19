@@ -35,7 +35,7 @@ public class Main {
                 parameterSupplier.getSketchSize(), parameterSupplier.getTau());
 
         List<Hash> indexHash = hasher.hash(referenceRead);
-        Map<Hash, Collection<Integer>> hashToIndexInRead = inverse(indexHash);
+        Map<Hash, Collection<Integer>> hashToReferenceReadIndices = inverse(indexHash);
         List<Hash> readHash = hasher.hash(subread);
 
         List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
@@ -43,7 +43,7 @@ public class Main {
 
         List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
                 sketches.stream().map(MinimizerValue::getValue).collect(Collectors.toList()),
-                hashToIndexInRead);
+                hashToReferenceReadIndices);
 
         List<IndexJaccardPair> result = readMapper.collectLikelySimilarRegions(
                 indexHash, readHash, candidateRegions);
