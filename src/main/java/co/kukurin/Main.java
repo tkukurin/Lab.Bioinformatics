@@ -1,7 +1,7 @@
 package co.kukurin;
 
-import co.kukurin.MappingRead.CandidateRegion;
-import co.kukurin.MappingRead.IndexJaccardPair;
+import co.kukurin.ReadMapper.CandidateRegion;
+import co.kukurin.ReadMapper.IndexJaccardPair;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.model.Hash;
 import com.google.common.collect.ArrayListMultimap;
@@ -21,11 +21,18 @@ public class Main {
         String referenceRead = "ovo je neki reference dokument iz korpusa";
         String subread = "neki document";
 
-        ParameterSupplier parameterSupplier = new ParameterSupplier(5, 3, 2, 0.15);
+        ParameterSupplier parameterSupplier = ParameterSupplier.builder()
+                .sketchSize(5)
+                .windowSize(3)
+                .kmerSize(2)
+                .epsilon(0.15)
+                .tau(0.1)
+                .build();
         Hasher hasher = new Hasher(parameterSupplier.getKmerSize());
         Minimizer minimizer = new Minimizer(parameterSupplier.getWindowSize());
         Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
-        MappingRead mappingRead = new MappingRead();
+        ReadMapper readMapper = new ReadMapper(
+                parameterSupplier.getSketchSize(), parameterSupplier.getTau());
 
         List<Hash> indexHash = hasher.hash(referenceRead);
         Map<Hash, Collection<Integer>> hashToIndexInRead = inverse(indexHash);
@@ -34,15 +41,12 @@ public class Main {
         List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
         List<MinimizerValue> sketches = sketcher.sketch(minimizerValues);
 
-        double tau = 0.1;
-        List<CandidateRegion> candidateRegions = mappingRead.collectCandidateRanges(
+        List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
                 sketches.stream().map(MinimizerValue::getValue).collect(Collectors.toList()),
-                hashToIndexInRead,
-                parameterSupplier.getSketchSize(),
-                tau);
+                hashToIndexInRead);
 
-        List<IndexJaccardPair> result = mappingRead.collectLikelySimilarRegions(
-                indexHash, readHash, candidateRegions, tau);
+        List<IndexJaccardPair> result = readMapper.collectLikelySimilarRegions(
+                indexHash, readHash, candidateRegions);
 
         result.stream().distinct().forEach(indexJaccardPair -> {
             System.out.println(indexJaccardPair);

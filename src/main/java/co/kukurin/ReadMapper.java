@@ -7,7 +7,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class MappingRead {
+@Value
+public class ReadMapper {
 
     @Value
     public static class CandidateRegion {
@@ -22,17 +23,18 @@ public class MappingRead {
         private double jaccardSimilarity;
     }
 
-    public List<CandidateRegion> collectCandidateRanges(
+    private final int sketchSize;
+    private final double tau;
+
+    public List<CandidateRegion> collectCandidateRegions(
             List<Hash> readHashes,
-            Map<Hash, Collection<Integer>> hashToIndexInReferenceRead,
-            int sketchSize,
-            double tau) {
+            Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
 
         int m = (int) Math.ceil(sketchSize * tau);
         List<Integer> indicesInReference =
                 readHashes.stream()
-                        .filter(hashToIndexInReferenceRead::containsKey)
-                        .flatMap(val -> hashToIndexInReferenceRead.get(val).stream())
+                        .filter(hashToReferenceReadIndices::containsKey)
+                        .flatMap(val -> hashToReferenceReadIndices.get(val).stream())
                         .sorted()
                         .collect(Collectors.toList());
         List<CandidateRegion> result = new LinkedList<>();
@@ -52,10 +54,8 @@ public class MappingRead {
     public List<IndexJaccardPair> collectLikelySimilarRegions(
             List<Hash> hashesInIndex,
             List<Hash> hashesInRead,
-            List<CandidateRegion> candidateRegions,
-            double tau) {
+            List<CandidateRegion> candidateRegions) {
         List<IndexJaccardPair> result = new ArrayList<>();
-        // TODO check what to do with multiple equal hashes.
         Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream().distinct()
                 .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 

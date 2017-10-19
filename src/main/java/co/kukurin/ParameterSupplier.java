@@ -1,16 +1,17 @@
 package co.kukurin;
 
-import lombok.AllArgsConstructor;
-import lombok.Value;
+import lombok.Builder;
+import lombok.Getter;
 
-@AllArgsConstructor
-@Value
+@Builder
+@Getter
 public class ParameterSupplier {
 
     private final int sketchSize;
     private final int windowSize;
     private final int kmerSize;
     private final double epsilon;
+    private final double tau;
 
     public double jaccardEstimate() {
         double denominator = 2 * Math.exp(epsilon * kmerSize) - 1;
