@@ -6,6 +6,7 @@ import lombok.Value;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Value
 public class ReadMapper {
@@ -42,15 +43,14 @@ public class ReadMapper {
             int j = i + (m - 1);
             int indexJ = sortedIndicesInReference.get(j);
             int indexI = sortedIndicesInReference.get(i);
-            if (indexJ - indexI <= readHashes.size()) {
+            if (indexJ - indexI < readHashes.size()) {
                 int low = indexJ - readHashes.size() + 1;
-                int high = indexI;
 
                 if (!result.isEmpty() && overlaps(result.peek(), low)) {
                     low = result.pop().getLow();
                 }
 
-                result.add(new CandidateRegion(low, high));
+                result.push(new CandidateRegion(Math.max(0, low), indexI));
             }
         }
 
@@ -66,13 +66,14 @@ public class ReadMapper {
             List<Hash> hashesInRead,
             List<CandidateRegion> candidateRegions) {
         List<IndexJaccardPair> result = new ArrayList<>();
-        Map<Hash, Integer> hashToAppearanceInBothReads = hashesInRead.stream().distinct()
+        Map<Hash, Integer> hashesInReadInverse = hashesInRead.stream().distinct()
                 .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
         for (CandidateRegion candidateRegion : candidateRegions) {
             int i = candidateRegion.getLow();
             int j = candidateRegion.getHigh();
 
+            Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadInverse);
             getMinimizers(hashesInIndex, i, j).forEach(
                     hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
             double jaccard = solveJaccard(hashToAppearanceInBothReads);
@@ -81,7 +82,7 @@ public class ReadMapper {
                 result.add(new IndexJaccardPair(i, jaccard));
             }
 
-            for (; i < candidateRegion.getHigh(); i++, j++) {
+            for (; i <= candidateRegion.getHigh(); i++, j++) {
                 getMinimizers(hashesInIndex, i, i + 1).forEach(
                         hash -> hashToAppearanceInBothReads.compute(hash, (k, v) -> v == 1 ? 0 : null));
                 getMinimizers(hashesInIndex, j, j + 1).forEach(
@@ -96,10 +97,8 @@ public class ReadMapper {
         return result;
     }
 
-    private List<Hash> getMinimizers(List<Hash> index, int lowInclusive, int highExclusive) {
-        return index.stream().skip(lowInclusive)
-                .limit(highExclusive - lowInclusive)
-                .collect(Collectors.toList());
+    private Stream<Hash> getMinimizers(List<Hash> index, int lowInclusive, int highExclusive) {
+        return index.stream().skip(lowInclusive).limit(highExclusive - lowInclusive);
     }
 
     private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
