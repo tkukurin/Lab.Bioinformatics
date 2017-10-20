@@ -39,7 +39,7 @@ public class ReadMapper {
                         .collect(Collectors.toList());
         Stack<CandidateRegion> result = new Stack<>();
 
-        for (int i = 0; i < sortedIndicesInReference.size() - m; i++) {
+        for (int i = 0; i <= sortedIndicesInReference.size() - m; i++) {
             int j = i + (m - 1);
             int indexJ = sortedIndicesInReference.get(j);
             int indexI = sortedIndicesInReference.get(i);
