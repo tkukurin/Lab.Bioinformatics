@@ -102,6 +102,6 @@ public class ReadMapper {
     }
 
     private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
-        return 1.0 * hashToAppearance.values().stream().mapToInt(i -> i).sum() / hashToAppearance.size();
+        return 1.0 * hashToAppearance.values().stream().mapToInt(i -> i).sum() / sketchSize;
     }
 }
