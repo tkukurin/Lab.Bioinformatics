@@ -66,14 +66,14 @@ public class ReadMapper {
             List<Hash> hashesInRead,
             List<CandidateRegion> candidateRegions) {
         List<IndexJaccardPair> result = new ArrayList<>();
-        Map<Hash, Integer> hashesInReadInverse = hashesInRead.stream().distinct()
+        Map<Hash, Integer> hashesInReadToZero = hashesInRead.stream().distinct()
                 .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
         for (CandidateRegion candidateRegion : candidateRegions) {
             int i = candidateRegion.getLow();
             int j = candidateRegion.getHigh();
 
-            Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadInverse);
+            Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
             getMinimizers(hashesInIndex, i, j).forEach(
                     hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
             double jaccard = solveJaccard(hashToAppearanceInBothReads);
