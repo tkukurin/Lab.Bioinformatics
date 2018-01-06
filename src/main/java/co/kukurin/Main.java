@@ -7,6 +7,7 @@ import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 import java.util.stream.StreamSupport;
 import org.rabinfingerprint.polynomial.Polynomial;
 
@@ -20,6 +21,8 @@ import org.yeastrc.fasta.FASTAReader;
 
 public class Main {
 
+    private static final Logger logger = Logger.getLogger("Main");
+
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
             System.out.println("Expected usage: [program] [reference FASTA file] [subread]");
@@ -27,11 +30,19 @@ public class Main {
         }
 
         try {
+            logger.info("Reading input files");
+
             FASTAReader referenceReader = FASTAReader.getInstance(args[0]);
-            List<FASTAEntry> entries = collectEntries(referenceReader);
+            List<FASTAEntry> references = collectEntries(referenceReader);
 
             FASTAReader subreadReader = FASTAReader.getInstance(args[1]);
             List<FASTAEntry> subreads = collectEntries(subreadReader);
+
+            logger.info(String.format("references: %d, subreads: %d",
+                references.size(), subreads.size()));
+
+            references = references.subList(0, 1);
+            subreads = subreads.subList(0, 1);
 
             ParameterSupplier parameterSupplier = ParameterSupplier.builder()
                 .fingerprintingPolynomial(Polynomial.createIrreducible(53))
@@ -42,7 +53,8 @@ public class Main {
                 .tau(0.1)
                 .build();
 
-            outputSolution(parameterSupplier, entries, subreads);
+            logger.info("Input files read");
+            outputSolution(parameterSupplier, references, subreads);
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());
             System.exit(1);
@@ -65,7 +77,8 @@ public class Main {
 
         for (FASTAEntry entry : entries) {
             for (FASTAEntry subread : subreads) {
-               outputSolution(
+                logger.info("Outputting solution for " + subread.getHeaderLine());
+                outputSolution(
                    hasher, sketcher, minimizer, readMapper,
                    entry.getSequence(), subread.getSequence());
             }
@@ -79,14 +92,18 @@ public class Main {
         ReadMapper readMapper,
         String referenceRead,
         String subread) {
+
+        logger.info("Hashing");
         List<Hash> indexHash = hasher.hash(referenceRead);
         List<Hash> readHash = hasher.hash(subread);
 
+        logger.info("Minimizing");
         List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
-        List<MinimizerValue> sketches = sketcher.sketch(minimizerValues);
 
+        logger.info("Extracting candidate regions");
         List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
-            sketches.stream().map(MinimizerValue::getValue).collect(Collectors.toList()),
+            sketcher.sketch(minimizerValues).stream()
+                .map(MinimizerValue::getValue).collect(Collectors.toList()),
             inverse(indexHash));
 
         List<IndexJaccardPair> result = readMapper.collectLikelySimilarRegions(
