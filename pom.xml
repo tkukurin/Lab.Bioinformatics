@@ -70,7 +70,14 @@
         <dependency>
             <groupId>org.rabinfingerprint</groupId>
             <artifactId>rabinfingerprint</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <systemPath>${basedir}/lib/rabinfingerprint-1.0.0-SNAPSHOT.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yeastrc.fasta</groupId>
+            <artifactId>fasta-utils</artifactId>
+            <scope>system</scope>
+        	<systemPath>${basedir}/lib/fasta-utils-1.1.jar</systemPath>
         </dependency>
 
         <dependency>
