@@ -9,10 +9,9 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class Sketcher {
 
-    private final int sketchSize;
+  private final int sketchSize;
 
-    public List<MinimizerValue> sketch(List<MinimizerValue> minimizerValues) {
-        return minimizerValues.stream().distinct().limit(sketchSize).collect(Collectors.toList());
-    }
-
+  public List<MinimizerValue> sketch(List<MinimizerValue> minimizerValues) {
+    return minimizerValues.stream().distinct().limit(sketchSize).collect(Collectors.toList());
+  }
 }
