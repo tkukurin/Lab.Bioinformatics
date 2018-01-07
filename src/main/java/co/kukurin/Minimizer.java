@@ -27,8 +27,12 @@ public class Minimizer {
             hashToLargestIndex.put(hashes.get(i), i);
         }
 
+        minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
         for (int i = windowSize; i < hashes.size(); i++) {
-            minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
+            MinimizerValue minimizerValue = extractSmallestMinimizer(hashToLargestIndex);
+            if (minimizerValue.getIndex() != minimizers.get(minimizers.size() - 1).getIndex()) {
+                minimizers.add(minimizerValue);
+            }
 
             int deletionIndex = i - windowSize;
             hashToLargestIndex.compute(

@@ -1,6 +1,8 @@
 package co.kukurin;
 
 import co.kukurin.Hasher.Hash;
+import co.kukurin.Minimizer.MinimizerValue;
+import java.util.function.Consumer;
 import lombok.Value;
 
 import java.util.*;
@@ -43,6 +45,12 @@ public class ReadMapper {
             int j = i + (m - 1);
             int indexJ = sortedIndicesInReference.get(j);
             int indexI = sortedIndicesInReference.get(i);
+
+            // TODO |A|, not hashes?
+            // indexJ and indexI represent indices in reference read B.
+            // size of intersect(A, B) in [i, j] in B is constant (= m).
+            // therefore, if range(i, j) is < |A|, jaccard similarity is expected to be > tau in
+            // read B from index position (j - |A|).
             if (indexJ - indexI < readHashes.size()) {
                 int low = indexJ - readHashes.size() + 1;
 
@@ -62,34 +70,36 @@ public class ReadMapper {
     }
 
     public List<IndexJaccardPair> collectLikelySimilarRegions(
-            List<Hash> hashesInIndex,
+            List<MinimizerValue> hashesInIndex,
             List<Hash> hashesInRead,
             List<CandidateRegion> candidateRegions) {
         List<IndexJaccardPair> result = new ArrayList<>();
+        // TODO not sure if I need this anymore?
         Map<Hash, Integer> hashesInReadToZero = hashesInRead.stream().distinct()
                 .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
         for (CandidateRegion candidateRegion : candidateRegions) {
             int i = candidateRegion.getLow();
-            int j = candidateRegion.getHigh();
+            // TODO i + |A|
+            int j = i + hashesInRead.size();
 
             Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
             getMinimizers(hashesInIndex, i, j).forEach(
                     hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
-            double jaccard = solveJaccard(hashToAppearanceInBothReads);
+            double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
 
-            if (jaccard >= tau) {
-                result.add(new IndexJaccardPair(i, jaccard));
+            if (jaccardEstimate >= tau) {
+                result.add(new IndexJaccardPair(i, jaccardEstimate));
             }
 
             for (; i <= candidateRegion.getHigh(); i++, j++) {
                 getMinimizers(hashesInIndex, i, i + 1).forEach(
-                        hash -> hashToAppearanceInBothReads.compute(hash, (k, v) -> v == 1 ? 0 : null));
+                    hashToAppearanceInBothReads::remove);
                 getMinimizers(hashesInIndex, j, j + 1).forEach(
-                        hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
-                jaccard = solveJaccard(hashToAppearanceInBothReads);
-                if (jaccard >= tau) {
-                    result.add(new IndexJaccardPair(i, jaccard));
+                    hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
+                jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
+                if (jaccardEstimate >= tau) {
+                    result.add(new IndexJaccardPair(i, jaccardEstimate));
                 }
             }
         }
@@ -97,8 +107,9 @@ public class ReadMapper {
         return result;
     }
 
-    private Stream<Hash> getMinimizers(List<Hash> index, int lowInclusive, int highExclusive) {
-        return index.stream().skip(lowInclusive).limit(highExclusive - lowInclusive);
+    private Stream<Hash> getMinimizers(List<MinimizerValue> index, int lowInclusive, int highExclusive) {
+        return index.stream().skip(lowInclusive).limit(highExclusive - lowInclusive)
+            .map(MinimizerValue::getValue);
     }
 
     private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
