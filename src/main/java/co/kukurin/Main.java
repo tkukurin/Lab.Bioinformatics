@@ -49,11 +49,11 @@ public class Main {
             logger.info("Query hashing");
             FASTAReader instance = FASTAReader.getInstance(args[1]);
             FASTAEntry entry = instance.readNext();
-            String query = null;
-            while (!entry.getHeaderLine().contains("17")) {
-                entry = instance.readNext();
-                query = entry.getSequence();
-            }
+            String query = entry.getSequence();
+//            while (!entry.getHeaderLine().contains("17")) {
+//                entry = instance.readNext();
+//                query = entry.getSequence();
+//            }
 
             System.out.println("Mapping read " + entry.getHeaderLine());
 
@@ -109,38 +109,6 @@ public class Main {
         logger.info(String.format("Heap memory usage: %s gb",
             ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / 1_000_000_000.0));
     }
-
-    // private static void outputSolution(
-    //     Hasher hasher,
-    //     Sketcher sketcher,
-    //     Minimizer minimizer,
-    //     ReadMapper readMapper,
-    //     String referenceRead,
-    //     String subread) {
-    //
-    //     logger.info("Hashing");
-    //     List<Hash> indexHash = hasher.hash(referenceRead);
-    //     List<Hash> readHash = hasher.hash(subread);
-    //
-    //     logger.info("Minimizing");
-    //     List<MinimizerValue> minimizerValues = minimizer.minimize(readHash);
-    //
-    //     logger.info("Extracting candidate regions");
-    //     List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
-    //         sketcher.sketch(minimizerValues).stream()
-    //             .map(MinimizerValue::getValue).collect(Collectors.toList()),
-    //         inverse(indexHash));
-    //
-    //     List<IndexJaccardPair> result = readMapper.collectLikelySimilarRegions(
-    //         indexHash, readHash, candidateRegions);
-    //
-    //     result.stream().distinct().forEach(indexJaccardPair -> {
-    //         System.out.println(indexJaccardPair);
-    //
-    //         int index = indexJaccardPair.getOriginalIndex();
-    //         System.out.println(referenceRead.substring(index, index + subread.length()));
-    //     });
-    // }
 
     private static Iterator<FASTAEntry> streamEntries(FASTAReader reader) {
       return new Iterator<FASTAEntry>() {

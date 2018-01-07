@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.rabinfingerprint.fingerprint.RabinFingerprintLongWindowed;
 import org.rabinfingerprint.polynomial.Polynomial;
@@ -11,6 +12,7 @@ import org.rabinfingerprint.polynomial.Polynomial;
 @AllArgsConstructor
 public class Hasher {
 
+    @EqualsAndHashCode
     public static class Hash implements Comparable<Hash> {
 
         @Getter
@@ -24,6 +26,7 @@ public class Hasher {
         public int compareTo(Hash o) {
             return Long.compare(hash, o.getHash());
         }
+
     }
 
     private final Polynomial hashingPolynomial;
