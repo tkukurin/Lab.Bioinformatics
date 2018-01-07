@@ -13,13 +13,14 @@ public class Minimizer {
 
     @Value
     public static class MinimizerValue {
-        private final int index;
+        private final int originalIndex;
         private final Hash value;
     }
 
     private final int windowSize;
 
     public List<MinimizerValue> minimize(List<Hash> hashes) {
+        // TODO deque
         TreeMap<Hash, Integer> hashToLargestIndex = new TreeMap<>();
         List<MinimizerValue> minimizers = new ArrayList<>();
 
@@ -30,7 +31,7 @@ public class Minimizer {
         minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
         for (int i = windowSize; i < hashes.size(); i++) {
             MinimizerValue minimizerValue = extractSmallestMinimizer(hashToLargestIndex);
-            if (minimizerValue.getIndex() != minimizers.get(minimizers.size() - 1).getIndex()) {
+            if (minimizerValue.getOriginalIndex() != minimizers.get(minimizers.size() - 1).getOriginalIndex()) {
                 minimizers.add(minimizerValue);
             }
 

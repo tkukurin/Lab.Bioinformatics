@@ -1,6 +1,9 @@
 package co.kukurin;
 
+import co.kukurin.Hasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
+import co.kukurin.ReadMapper.CandidateRegion;
+import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import java.io.IOException;
@@ -34,7 +37,6 @@ public class Main {
             ParameterSupplier parameterSupplier = ParameterSupplier.builder()
                 .fingerprintingPolynomial(Polynomial.createIrreducible(53))
                 .stringToByteArrayConverter(String::getBytes)
-                .sketchSize(5)
                 .windowSize(90)
                 .kmerSize(16)
                 .tau(0.1)
@@ -43,10 +45,30 @@ public class Main {
                 parameterSupplier.getFingerprintingPolynomial(),
                 parameterSupplier.getStringToByteArrayConverter(),
                 parameterSupplier.getKmerSize());
+
+            logger.info("Query hashing");
+            FASTAReader instance = FASTAReader.getInstance(args[1]);
+            FASTAEntry entry = instance.readNext();
+            String query = null;
+            while (!entry.getHeaderLine().contains("17")) {
+                entry = instance.readNext();
+                query = entry.getSequence();
+            }
+
+            System.out.println("Mapping read " + entry.getHeaderLine());
+
+            List<Hash> queryHashes = hasher.hash(query);
+            // List<MinimizerValue> queryMinimizers = minimizer.minimize(queryHashes);
+
+            logger.info("Loaded query hashes");
+            logMemoryUsage();
+            parameterSupplier.setSketchSize((int) (2 * query.length() / 90.0));
+            System.out.println("sketch size: " + parameterSupplier.getSketchSize());
+
+                //(int) queryHashes.stream().distinct().count());
+
             Minimizer minimizer = new Minimizer(
                 parameterSupplier.getWindowSize());
-            Sketcher sketcher = new Sketcher(
-                parameterSupplier.getSketchSize());
             ReadMapper readMapper = new ReadMapper(
                 parameterSupplier.getSketchSize(),
                 parameterSupplier.getTau());
@@ -54,20 +76,28 @@ public class Main {
             logMemoryUsage();
 
             logger.info("Hashing");
-            List<MinimizerValue> indexMinimizers = minimizer.minimize(
-                hasher.hash(FASTAReader.getInstance(args[0]).readNext().getSequence()));
+            String sequence = FASTAReader.getInstance(args[0]).readNext().getSequence();
+            List<MinimizerValue> referenceMinimizers = minimizer.minimize(hasher.hash(sequence));
 
+            Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
+            logger.info("Number of hashes total: " + inverse.size());
+            logger.info("Loading candidate regions");
+            List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
+                queryHashes, inverse);
+
+            System.out.println("Candidate regions");
+            candidateRegions.forEach(System.out::println);
+
+            logger.info("Done");
             logMemoryUsage();
 
-            logger.info("Computing index hash inverse");
-            Map<Long, Collection<Integer>> indexHashInverse = inverse(indexMinimizers);
+            List<IndexJaccardPair> pairs = readMapper.collectLikelySimilarRegions(
+                referenceMinimizers,
+                queryHashes,
+                candidateRegions);
 
-            logger.info("done");
-            logMemoryUsage();
-
-            logger.info("Query minimizing");
-            List<MinimizerValue> queryMinimizers = minimizer.minimize(
-                hasher.hash(FASTAReader.getInstance(args[1]).readNext().getSequence()));
+            logger.info("Found " + pairs.size() + " pairs");
+            pairs.forEach(System.out::println);
 
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());
@@ -107,7 +137,7 @@ public class Main {
     //     result.stream().distinct().forEach(indexJaccardPair -> {
     //         System.out.println(indexJaccardPair);
     //
-    //         int index = indexJaccardPair.getIndex();
+    //         int index = indexJaccardPair.getOriginalIndex();
     //         System.out.println(referenceRead.substring(index, index + subread.length()));
     //     });
     // }
@@ -144,13 +174,13 @@ public class Main {
         return entries;
     }
 
-    private static Map<Long, Collection<Integer>> inverse(List<MinimizerValue> indexHash) {
-        Multimap<Long, Integer> result = ArrayListMultimap.create();
+    private static Map<Hash, Collection<Integer>> inverse(List<MinimizerValue> indexHash) {
+        Multimap<Hash, Integer> result = ArrayListMultimap.create();
         for (int i = 0; i < indexHash.size(); i++) {
             MinimizerValue minimizerValue = indexHash.get(i);
             result.put(
-                minimizerValue.getValue().getHash(),
-                minimizerValue.getIndex());
+                minimizerValue.getValue(),
+                minimizerValue.getOriginalIndex());
         }
         return result.asMap();
     }

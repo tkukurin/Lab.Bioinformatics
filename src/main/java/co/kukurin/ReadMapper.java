@@ -2,29 +2,33 @@ package co.kukurin;
 
 import co.kukurin.Hasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
-import java.util.function.Consumer;
+import java.util.function.ToIntFunction;
+import java.util.logging.Logger;
+import lombok.ToString;
 import lombok.Value;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Value
 public class ReadMapper {
 
     @Value
+    @ToString
     public static class CandidateRegion {
         private int low;
         private int high;
-
     }
 
     @Value
+    @ToString
     public static class IndexJaccardPair {
         private int index;
-        private double jaccardSimilarity;
+        private double jaccardEstimate;
     }
+
+    private static final Logger logger = Logger.getLogger("ReadMapper");
 
     private final int sketchSize;
     private final double tau;
@@ -40,6 +44,9 @@ public class ReadMapper {
                         .sorted()
                         .collect(Collectors.toList());
         Stack<CandidateRegion> result = new Stack<>();
+
+        logger.info(sortedIndicesInReference.size() + " sorted indices");
+        sortedIndicesInReference.stream().limit(4).forEach(System.out::println);
 
         for (int i = 0; i <= sortedIndicesInReference.size() - m; i++) {
             int j = i + (m - 1);
@@ -70,7 +77,7 @@ public class ReadMapper {
     }
 
     public List<IndexJaccardPair> collectLikelySimilarRegions(
-            List<MinimizerValue> hashesInIndex,
+            List<MinimizerValue> reference,
             List<Hash> hashesInRead,
             List<CandidateRegion> candidateRegions) {
         List<IndexJaccardPair> result = new ArrayList<>();
@@ -84,7 +91,7 @@ public class ReadMapper {
             int j = i + hashesInRead.size();
 
             Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
-            getMinimizers(hashesInIndex, i, j).forEach(
+            getMinimizers(reference, i, j).forEach(
                     hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
             double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
 
@@ -93,9 +100,9 @@ public class ReadMapper {
             }
 
             for (; i <= candidateRegion.getHigh(); i++, j++) {
-                getMinimizers(hashesInIndex, i, i + 1).forEach(
+                getMinimizers(reference, i, i + 1).forEach(
                     hashToAppearanceInBothReads::remove);
-                getMinimizers(hashesInIndex, j, j + 1).forEach(
+                getMinimizers(reference, j, j + 1).forEach(
                     hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
                 jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
                 if (jaccardEstimate >= tau) {
@@ -107,12 +114,28 @@ public class ReadMapper {
         return result;
     }
 
-    private Stream<Hash> getMinimizers(List<MinimizerValue> index, int lowInclusive, int highExclusive) {
-        return index.stream().skip(lowInclusive).limit(highExclusive - lowInclusive)
-            .map(MinimizerValue::getValue);
+    private List<Hash> getMinimizers(List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
+        int i = binaryFindIndexOfFirstGteValue(reference, MinimizerValue::getOriginalIndex,
+            new MinimizerValue(lowInclusive, null));
+
+        List<Hash> result = new ArrayList<>();
+        while (i < reference.size() && reference.get(i).getOriginalIndex() < highExclusive) {
+            result.add(reference.get(i++).getValue());
+        }
+        return result;
+    }
+
+    private int binaryFindIndexOfFirstGteValue(List<MinimizerValue> index,
+        ToIntFunction<MinimizerValue> intComparator, MinimizerValue startingKey) {
+        int i = Collections.binarySearch(index,
+            startingKey,
+            Comparator.comparingInt(intComparator));
+        return i < 0 ? -i : i;
     }
 
     private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
-        return 1.0 * hashToAppearance.values().stream().mapToInt(i -> i).sum() / sketchSize;
+        int sharedSketch = hashToAppearance.values().stream()
+            .limit(sketchSize).mapToInt(i -> i).sum();
+        return 1.0 * sharedSketch / sketchSize;
     }
 }
