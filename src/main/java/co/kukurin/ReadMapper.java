@@ -10,6 +10,7 @@ import lombok.Value;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.experimental.NonFinal;
 
 @Value
 public class ReadMapper {
@@ -30,6 +31,11 @@ public class ReadMapper {
 
   private static final Logger logger = Logger.getLogger("ReadMapper");
 
+  @NonFinal
+  private static int nLogged = 0;
+  @NonFinal
+  private static int tauLogged = 0;
+
   private final int sketchSize;
   private final double tau;
 
@@ -39,6 +45,7 @@ public class ReadMapper {
     List<Integer> sortedIndicesInReference =
         readHashes
             .stream()
+            .distinct() // TODO I think this should be here.
             .filter(hashToReferenceReadIndices::containsKey)
             .flatMap(val -> hashToReferenceReadIndices.get(val).stream())
             .sorted()
@@ -98,10 +105,12 @@ public class ReadMapper {
           .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
       double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
 
-      logger.info("jaccard estimate: " + jaccardEstimate);
+      if (tauLogged++ < 50) {
+        logger.info("jaccard estimate: " + jaccardEstimate);
+      }
 
       if (jaccardEstimate >= tau) {
-        result.add(new IndexJaccardPair(i, jaccardEstimate));
+        addAndLog(result, i, jaccardEstimate);
       }
 
       for (; i <= candidateRegion.getHigh(); i++, j++) {
@@ -109,14 +118,20 @@ public class ReadMapper {
         getMinimizers(reference, j, j + 1)
             .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
         jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
-        logger.info("jaccard estimate: " + jaccardEstimate);
         if (jaccardEstimate >= tau) {
-          result.add(new IndexJaccardPair(i, jaccardEstimate));
+          addAndLog(result, i, jaccardEstimate);
         }
       }
     }
 
     return result;
+  }
+
+  private boolean addAndLog(List<IndexJaccardPair> result, int i, double jaccardEstimate) {
+    if (nLogged++ < 50) {
+      logger.info("Found good Jaccard estimate at index " + i + " " + jaccardEstimate);
+    }
+    return result.add(new IndexJaccardPair(i, jaccardEstimate));
   }
 
   private List<Hash> getMinimizers(

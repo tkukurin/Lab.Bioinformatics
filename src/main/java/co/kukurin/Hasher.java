@@ -1,5 +1,6 @@
 package co.kukurin;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -13,7 +14,7 @@ import org.rabinfingerprint.polynomial.Polynomial;
 public class Hasher {
 
     @EqualsAndHashCode
-    public static class Hash implements Comparable<Hash> {
+    public static class Hash implements Comparable<Hash>, Serializable {
 
         @Getter
         private long hash;

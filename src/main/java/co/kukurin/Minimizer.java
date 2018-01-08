@@ -1,6 +1,7 @@
 package co.kukurin;
 
 import co.kukurin.Hasher.Hash;
+import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
@@ -12,7 +13,7 @@ import java.util.TreeMap;
 public class Minimizer {
 
   @Value
-  public static class MinimizerValue {
+  public static class MinimizerValue implements Serializable {
     private final int originalIndex;
     private final Hash value;
   }

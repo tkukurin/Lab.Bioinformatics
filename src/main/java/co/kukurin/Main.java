@@ -6,9 +6,16 @@ import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.management.ManagementFactory;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -28,6 +35,30 @@ public class Main {
             System.exit(1);
         }
 
+        List<MinimizerValue> minimizerValues = deserialize("referenceMinimizers.ser");
+        serialize("referenceMinimizers", minimizerValues);
+
+
+        if (Files.exists(Paths.get("test_1.ser"))) {
+            for (int i = 1; i <= 5; i++) {
+                List<String> deserialize = deserialize("test_" + i + ".ser");
+                System.out.println(i);
+                deserialize.forEach(System.out::println);
+            }
+        }
+
+        List<String> test = Arrays.asList(
+            "test value 1",
+            "test value 2",
+            "test value 3",
+            "test value 4",
+            "test value 5");
+        serialize("test", test);
+
+        if (test.size() == 5) {
+            return;
+        }
+
         logMemoryUsage();
 
         try {
@@ -39,7 +70,7 @@ public class Main {
                 .stringToByteArrayConverter(String::getBytes)
                 .windowSize(90)
                 .kmerSize(16)
-                .tau(0.1)
+                .tau(0.4)
                 .build();
             Hasher hasher = new Hasher(
                 parameterSupplier.getFingerprintingPolynomial(),
@@ -73,17 +104,24 @@ public class Main {
                 parameterSupplier.getSketchSize(),
                 parameterSupplier.getTau());
 
+            List<MinimizerValue> referenceMinimizers = deserialize("referenceMinimizers.ser");
+            logger.info("size: " + referenceMinimizers.size());
             logMemoryUsage();
 
             logger.info("Hashing");
             String sequence = FASTAReader.getInstance(args[0]).readNext().getSequence();
-            List<MinimizerValue> referenceMinimizers = minimizer.minimize(hasher.hash(sequence));
+            List<Hash> referenceHashes = hasher.hash(sequence);
+            serialize("referenceHashes", referenceHashes);
+
+            serialize("referenceMinimizers", referenceMinimizers);
 
             Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
             logger.info("Number of hashes total: " + inverse.size());
             logger.info("Loading candidate regions");
             List<CandidateRegion> candidateRegions = readMapper.collectCandidateRegions(
                 queryHashes, inverse);
+
+            serialize("candidateRegions.ser", candidateRegions);
 
             System.out.println("Candidate regions");
             candidateRegions.forEach(System.out::println);
@@ -103,6 +141,37 @@ public class Main {
             System.out.println(e.getLocalizedMessage());
             System.exit(1);
         }
+    }
+
+    private static <T> void serialize(String name, List<T> list) throws IOException {
+      serialize(".", name, list);
+    }
+
+    private static <T> void serialize(String dir, String name, List<T> list) throws IOException {
+      int nSplit = 5;
+      int batchSize = list.size() / nSplit;
+      for (int i = 1; i <= nSplit; i++) {
+          int storedSoFar = (i - 1) * batchSize;
+          int itemsToStore = i == nSplit ? list.size() - storedSoFar : batchSize;
+          String filepath = dir + "/" + name + "_" + i + ".ser";
+
+          try (FileOutputStream fileOutputStream = new FileOutputStream(filepath);
+              ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
+              objectOutputStream.writeObject(new ArrayList<>(list.subList(storedSoFar, storedSoFar + itemsToStore)));
+          }
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> List<T> deserialize(String name) {
+        try(FileInputStream fileInputStream = new FileInputStream(name);
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
+            return (List<T>) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Not found");
+        }
+
+        return null;
     }
 
     private static void logMemoryUsage() {
