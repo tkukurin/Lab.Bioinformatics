@@ -1,10 +1,9 @@
 package co.kukurin;
 
 import co.kukurin.Minimizer.MinimizerValue;
-import lombok.AllArgsConstructor;
-
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class Sketcher {

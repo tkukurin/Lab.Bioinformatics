@@ -2,14 +2,21 @@ package co.kukurin;
 
 import co.kukurin.Hasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
+import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
+import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import lombok.ToString;
 import lombok.Value;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Value
 public class ReadMapper {
@@ -17,6 +24,7 @@ public class ReadMapper {
   @Value
   @ToString
   public static class CandidateRegion {
+
     private int low;
     private int high;
   }
@@ -24,6 +32,7 @@ public class ReadMapper {
   @Value
   @ToString
   public static class IndexJaccardPair {
+
     private int index;
     private double jaccardEstimate;
   }
@@ -44,10 +53,6 @@ public class ReadMapper {
             .sorted()
             .collect(Collectors.toList());
     Stack<CandidateRegion> result = new Stack<>();
-
-    logger.info(sortedIndicesInReference.size() + " sorted indices");
-    sortedIndicesInReference.stream().limit(4).forEach(System.out::println);
-
     for (int i = 0; i <= sortedIndicesInReference.size() - m; i++) {
       int j = i + (m - 1);
       int indexJ = sortedIndicesInReference.get(j);
@@ -96,34 +101,31 @@ public class ReadMapper {
       Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
       getMinimizers(reference, i, j)
           .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
-      double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
 
-      logger.info("jaccard estimate: " + jaccardEstimate);
-
-      if (jaccardEstimate >= tau) {
-        result.add(new IndexJaccardPair(i, jaccardEstimate));
-      }
-
+      result.addAll(newPairs(i, hashToAppearanceInBothReads));
       for (; i <= candidateRegion.getHigh(); i++, j++) {
         getMinimizers(reference, i, i + 1).forEach(hashToAppearanceInBothReads::remove);
         getMinimizers(reference, j, j + 1)
             .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
-        jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
-        logger.info("jaccard estimate: " + jaccardEstimate);
-        if (jaccardEstimate >= tau) {
-          result.add(new IndexJaccardPair(i, jaccardEstimate));
-        }
+
+        result.addAll(newPairs(i, hashToAppearanceInBothReads));
       }
     }
 
     return result;
   }
 
+  private List<IndexJaccardPair> newPairs(int i, Map<Hash, Integer> hashToAppearanceInBothReads) {
+    double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
+    return jaccardEstimate >= tau
+        ? Collections.singletonList(new IndexJaccardPair(i, jaccardEstimate))
+        : Collections.emptyList();
+  }
+
   private List<Hash> getMinimizers(
       List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
-    int i =
-        binaryFindIndexOfFirstGteValue(
-            reference, MinimizerValue::getOriginalIndex, new MinimizerValue(lowInclusive, null));
+    int i = binaryFindIndexOfFirstGteValue(
+        reference, MinimizerValue::getOriginalIndex, lowInclusive);
 
     List<Hash> result = new ArrayList<>();
     while (i < reference.size() && reference.get(i).getOriginalIndex() < highExclusive) {
@@ -135,8 +137,9 @@ public class ReadMapper {
   private int binaryFindIndexOfFirstGteValue(
       List<MinimizerValue> index,
       ToIntFunction<MinimizerValue> intComparator,
-      MinimizerValue startingKey) {
-    int i = Collections.binarySearch(index, startingKey, Comparator.comparingInt(intComparator));
+      int startingKey) {
+    int i = Collections.binarySearch(
+        index, new MinimizerValue(startingKey, null), Comparator.comparingInt(intComparator));
     return i < 0 ? -i : i;
   }
 

@@ -1,18 +1,18 @@
 package co.kukurin;
 
 import co.kukurin.Hasher.Hash;
-import lombok.AllArgsConstructor;
-import lombok.Value;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 
 @AllArgsConstructor
 public class Minimizer {
 
   @Value
   public static class MinimizerValue {
+
     private final int originalIndex;
     private final Hash value;
   }
