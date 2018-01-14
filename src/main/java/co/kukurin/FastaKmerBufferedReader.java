@@ -1,7 +1,6 @@
 package co.kukurin;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Iterator;
@@ -16,12 +15,12 @@ public class FastaKmerBufferedReader {
 
   private String header;
 
-  public FastaKmerBufferedReader(Reader reader, int kmerSize) throws FileNotFoundException {
+  public FastaKmerBufferedReader(Reader reader, int kmerSize) {
     this.bufferedReader = new BufferedReader(reader);
     this.kmerSize = kmerSize;
   }
 
-  public Iterator<Character> readNext() throws IOException {
+  public Iterator<Character> nextKmer() throws IOException {
     int readValue = nextNonWhitespace();
 
     if (readValue == -1) {
@@ -30,7 +29,7 @@ public class FastaKmerBufferedReader {
 
     if (readValue == '>') {
       header = bufferedReader.readLine().trim();
-      return readNext();
+      return nextKmer();
     }
 
     if (values == null) {

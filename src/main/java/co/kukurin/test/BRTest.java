@@ -15,10 +15,10 @@ public class BRTest {
     HashFunction hashFunction = Hashing.murmur3_32();
 
     int i = 0;
-    for (Iterator<Character> iterable = r.readNext(); iterable.hasNext(); ) {
+    for (Iterator<Character> iterable = r.nextKmer(); iterable.hasNext(); ) {
       Hasher hasher = hashFunction.newHasher();
 
-      r.readNext().forEachRemaining(c -> {
+      r.nextKmer().forEachRemaining(c -> {
         System.out.print(c);
         hasher.putChar(c);
       });

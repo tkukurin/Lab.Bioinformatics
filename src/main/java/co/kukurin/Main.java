@@ -15,9 +15,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 import org.rabinfingerprint.polynomial.Polynomial;
@@ -30,9 +32,8 @@ public class Main {
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
 
   public static void main(String[] args) throws IOException {
-
     if (args.length != 2) {
-      System.out.println("Expected usage: [program] [reference FASTA file] [query FASTA file]");
+      System.err.println("Expected usage: [program] [reference FASTA file] [query FASTA file]");
       System.exit(1);
     }
 
@@ -61,35 +62,27 @@ public class Main {
       // retain reference minimizers for efficient computation of W(B_i)
       // 4.2. "we store W(B) as an array M of tuples (h, pos)"
       String referenceFilename = args[0];
-      // String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
-      // List<Hash> referenceHashes = hasher.hash(reference);
       List<Hash> referenceHashes = extractHashes(new FastaKmerBufferedReader(
           new FileReader(referenceFilename), constantParameters.getKmerSize()));
       List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
 
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
-      // hashed value h, we laso replicate W(B) as a hash table H.
+      // hashed value h, we laso replicate W(B) as a hash table H."
       Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
       logger.info("Number of hashes total: " + inverse.size());
 
       String queryFilename = args[1];
       long queryStartTime = System.currentTimeMillis();
       readAllFasta(queryFilename).forEachRemaining(queryEntry -> {
+        out.println(queryEntry.getHeaderLine());
         String query = queryEntry.getSequence();
 
-        // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
         List<Hash> queryHashes = hasher.hash(query);
-        logger.info("Query hashes: " + queryHashes.size());
-        TreeSet<Hash> uniqueHashes = new TreeSet<>(queryHashes);
+        Set<Hash> uniqueHashes = new HashSet<>(queryHashes);
 
+        // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
         ParameterSupplier parameterSupplier = new ParameterSupplier(
             constantParameters, query, uniqueHashes.size());
-
-        // logger.info("Mapping read " + queryEntry.getHeaderLine());
-        // logger.info("Query length: " + query.length());
-        out.println(queryEntry.getHeaderLine());
-
-        // Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
         ReadMapper readMapper =
             new ReadMapper(
                 parameterSupplier.getSketchSize(),
@@ -109,15 +102,15 @@ public class Main {
       logger.info("Total time: " + (endTime - startTime) / 1000.0 + "s");
       logger.info("Query map time: " + (endTime - queryStartTime) / 1000.0 + "s");
     } catch (Exception e) {
-      System.out.println("ERROR executing program:");
-      System.out.println(e.getLocalizedMessage());
+      System.err.println("ERROR executing program:");
+      System.err.println(e.getLocalizedMessage());
       System.exit(1);
     }
   }
 
   private static List<Hash> extractHashes(FastaKmerBufferedReader reader) throws IOException {
     List<Hash> hashes = new ArrayList<>();
-    for (Iterator<Character> i = reader.readNext(); i.hasNext(); i = reader.readNext()) {
+    for (Iterator<Character> i = reader.nextKmer(); i.hasNext(); i = reader.nextKmer()) {
       com.google.common.hash.Hasher hasher = HASH_FUNCTION.newHasher();
       i.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));

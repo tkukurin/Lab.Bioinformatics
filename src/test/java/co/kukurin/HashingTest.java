@@ -60,11 +60,9 @@ public class HashingTest {
     ReadHasher readHasher = new ReadHasher(kmerSize);
 
     // when
-    for (char b : testString.toCharArray()) {
-      hasher.putChar(b);
-    }
-
+    testString.chars().forEach(c -> hasher.putChar((char) c));
     long hash1 = hasher.hash().asLong();
+
     List<Hash> singletonList = readHasher.hash(testString);
     long hash2 = Iterables.getOnlyElement(singletonList).getHash();
 

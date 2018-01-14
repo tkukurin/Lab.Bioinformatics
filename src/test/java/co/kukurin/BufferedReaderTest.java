@@ -17,13 +17,13 @@ public class BufferedReaderTest {
 
     // when
     StringBuilder first = new StringBuilder();
-    reader.readNext().forEachRemaining(first::append);
+    reader.nextKmer().forEachRemaining(first::append);
 
     StringBuilder second = new StringBuilder();
-    reader.readNext().forEachRemaining(second::append);
+    reader.nextKmer().forEachRemaining(second::append);
 
     StringBuilder third = new StringBuilder();
-    reader.readNext().forEachRemaining(third::append);
+    reader.nextKmer().forEachRemaining(third::append);
 
     // then
     assertEquals("12345", first.toString());
