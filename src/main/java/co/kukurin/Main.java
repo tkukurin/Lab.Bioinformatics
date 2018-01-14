@@ -1,6 +1,6 @@
 package co.kukurin;
 
-import co.kukurin.Hasher.Hash;
+import co.kukurin.ReadHasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
 import co.kukurin.ReadMapper.CandidateRegion;
@@ -10,6 +10,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import org.yeastrc.fasta.FASTAReader;
 public class Main {
 
   private static final Logger logger = Logger.getLogger("Main");
+  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
 
   public static void main(String[] args) throws IOException {
 
@@ -34,7 +36,6 @@ public class Main {
       System.exit(1);
     }
 
-    HashFunction hashFunction = Hashing.murmur3_128();
     try (FileOutputStream fos = new FileOutputStream("out.txt");
          PrintStream out = new PrintStream(fos)) {
 
@@ -53,20 +54,17 @@ public class Main {
       Minimizer minimizer = new Minimizer(
           constantParameters.getWindowSize(),
           constantParameters.getKmerSize());
-      Hasher hasher =
-          new Hasher(
-              constantParameters.getFingerprintingPolynomial(),
-              constantParameters.getStringToByteArrayConverter(),
-              constantParameters.getKmerSize());
+      ReadHasher hasher = new ReadHasher(constantParameters.getKmerSize());
 
       long startTime = System.currentTimeMillis();
 
       // retain reference minimizers for efficient computation of W(B_i)
       // 4.2. "we store W(B) as an array M of tuples (h, pos)"
       String referenceFilename = args[0];
-      String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
-      List<Hash> referenceHashes = extractHashes(new FastaBufferedReader(referenceFilename, 16));
+      // String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
       // List<Hash> referenceHashes = hasher.hash(reference);
+      List<Hash> referenceHashes = extractHashes(new FastaKmerBufferedReader(
+          new FileReader(referenceFilename), constantParameters.getKmerSize()));
       List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
 
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
@@ -76,11 +74,12 @@ public class Main {
 
       String queryFilename = args[1];
       long queryStartTime = System.currentTimeMillis();
-      streamFastaEntries(queryFilename).forEachRemaining(queryEntry -> {
+      readAllFasta(queryFilename).forEachRemaining(queryEntry -> {
         String query = queryEntry.getSequence();
 
         // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
         List<Hash> queryHashes = hasher.hash(query);
+        logger.info("Query hashes: " + queryHashes.size());
         TreeSet<Hash> uniqueHashes = new TreeSet<>(queryHashes);
 
         ParameterSupplier parameterSupplier = new ParameterSupplier(
@@ -97,7 +96,7 @@ public class Main {
                 parameterSupplier.getConstantParameters().getTau());
 
         List<CandidateRegion> candidateRegions =
-            readMapper.collectCandidateRegions(queryHashes, inverse);
+            readMapper.collectCandidateRegions(uniqueHashes, inverse);
         List<IndexJaccardPair> pairs =
             readMapper.collectLikelySimilarRegions(
                 referenceMinimizers, queryHashes, candidateRegions);
@@ -116,18 +115,17 @@ public class Main {
     }
   }
 
-  private static List<Hash> extractHashes(FastaBufferedReader r) throws IOException {
+  private static List<Hash> extractHashes(FastaKmerBufferedReader reader) throws IOException {
     List<Hash> hashes = new ArrayList<>();
-    HashFunction hashFunction = Hashing.murmur3_128();
-    for (Iterator<Character> iterable = r.readNext(); iterable.hasNext(); iterable = r.readNext()) {
-      com.google.common.hash.Hasher hasher = hashFunction.newHasher();
-      iterable.forEachRemaining(hasher::putChar);
+    for (Iterator<Character> i = reader.readNext(); i.hasNext(); i = reader.readNext()) {
+      com.google.common.hash.Hasher hasher = HASH_FUNCTION.newHasher();
+      i.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));
     }
     return hashes;
   }
 
-  private static Iterator<FASTAEntry> streamFastaEntries(String queryFilename) throws Exception {
+  private static Iterator<FASTAEntry> readAllFasta(String queryFilename) throws Exception {
     FASTAReader reader = FASTAReader.getInstance(queryFilename);
     return new Iterator<FASTAEntry>() {
       FASTAEntry current;

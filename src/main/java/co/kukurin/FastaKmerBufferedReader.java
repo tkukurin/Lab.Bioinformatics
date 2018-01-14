@@ -2,11 +2,11 @@ package co.kukurin;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.Iterator;
 
-public class FastaBufferedReader {
+public class FastaKmerBufferedReader {
 
   private final BufferedReader bufferedReader;
   private final int kmerSize;
@@ -14,20 +14,22 @@ public class FastaBufferedReader {
   private char[] values;
   private int valuesIter = -1;
 
-  public FastaBufferedReader(String filename, int kmerSize) throws FileNotFoundException {
-    this.bufferedReader = new BufferedReader(new FileReader(filename));
+  private String header;
+
+  public FastaKmerBufferedReader(Reader reader, int kmerSize) throws FileNotFoundException {
+    this.bufferedReader = new BufferedReader(reader);
     this.kmerSize = kmerSize;
   }
 
   public Iterator<Character> readNext() throws IOException {
-    int readValue = bufferedReader.read();
+    int readValue = nextNonWhitespace();
 
     if (readValue == -1) {
       return emptyIterator();
     }
 
     if (readValue == '>') {
-      bufferedReader.readLine();
+      header = bufferedReader.readLine().trim();
       return readNext();
     }
 
@@ -45,13 +47,24 @@ public class FastaBufferedReader {
 
     valuesIter = (valuesIter + 1) % kmerSize;
     values[valuesIter] = (char) readValue;
-    return charBufIterator(valuesIter);
+
+    return charBufIterator((valuesIter + 1) % kmerSize);
+  }
+
+  private int nextNonWhitespace() throws IOException {
+    int readValue = bufferedReader.read();
+
+    while (Character.isWhitespace(readValue)) {
+      readValue = bufferedReader.read();
+    }
+
+    return readValue;
   }
 
   private Iterator<Character> charBufIterator(int start) {
     return new Iterator<Character>() {
       int nRead = 0;
-      int i = start - 1;
+      int i = (start + kmerSize - 1) % kmerSize;
 
       @Override
       public boolean hasNext() {

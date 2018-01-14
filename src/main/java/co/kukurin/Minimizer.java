@@ -1,12 +1,10 @@
 package co.kukurin;
 
-import co.kukurin.Hasher.Hash;
+import co.kukurin.ReadHasher.Hash;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 

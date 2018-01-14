@@ -2,7 +2,7 @@ package co.kukurin;
 
 import static org.junit.Assert.assertEquals;
 
-import co.kukurin.Hasher.Hash;
+import co.kukurin.ReadHasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
 import java.util.List;
 import java.util.stream.Collectors;

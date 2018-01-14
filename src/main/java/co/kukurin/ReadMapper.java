@@ -1,20 +1,20 @@
 package co.kukurin;
 
-import co.kukurin.Hasher.Hash;
+import co.kukurin.ReadHasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
-import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
-import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.Value;
 
@@ -23,6 +23,7 @@ public class ReadMapper {
 
   @Value
   @ToString
+  @EqualsAndHashCode
   public static class CandidateRegion {
 
     private int low;
@@ -43,7 +44,7 @@ public class ReadMapper {
   private final double tau;
 
   public List<CandidateRegion> collectCandidateRegions(
-      List<Hash> readHashes, Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
+      Set<Hash> readHashes, Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
     int m = (int) Math.ceil(sketchSize * tau);
     List<Integer> sortedIndicesInReference =
         readHashes
@@ -55,22 +56,23 @@ public class ReadMapper {
     Stack<CandidateRegion> result = new Stack<>();
     for (int i = 0; i <= sortedIndicesInReference.size() - m; i++) {
       int j = i + (m - 1);
-      int indexJ = sortedIndicesInReference.get(j);
-      int indexI = sortedIndicesInReference.get(i);
+      int indexHi = sortedIndicesInReference.get(j);
+      int indexLo = sortedIndicesInReference.get(i);
 
-      // TODO |A|, not hashes?
-      // indexJ and indexI represent indices in reference read B.
-      // size of intersect(A, B) in [i, j] in B is constant (= m).
+      // sketchSize == |A|
+      // indexHi and indexLo represent indices in reference read B.
+      // size of intersect(A, B) in B from L[i] to L[j] is constant (= m).
       // therefore, if range(i, j) is < |A|, jaccard similarity is expected to be > tau in
-      // read B from index position (j - |A|).
-      if (indexJ - indexI < readHashes.size()) {
-        int low = indexJ - readHashes.size() + 1;
+      // read B from index position (L[j] - |A|).
+      int minDistance = sketchSize;
+      if (indexHi - indexLo < minDistance) {
+        int low = indexHi - minDistance + 1;
 
         if (!result.isEmpty() && overlaps(result.peek(), low)) {
           low = result.pop().getLow();
         }
 
-        result.push(new CandidateRegion(Math.max(0, low), indexI));
+        result.push(new CandidateRegion(Math.max(0, low), indexLo));
       }
     }
 
@@ -87,26 +89,25 @@ public class ReadMapper {
       List<CandidateRegion> candidateRegions) {
     List<IndexJaccardPair> result = new ArrayList<>();
     // TODO not sure if I need this anymore?
-    Map<Hash, Integer> hashesInReadToZero =
-        hashesInRead
-            .stream()
-            .distinct()
-            .collect(Collectors.toMap(Function.identity(), ignored -> 0));
+    // Map<Hash, Integer> hashesInReadToZero =
+    //     hashesInRead
+    //         .stream()
+    //         .distinct()
+    //         .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
     for (CandidateRegion candidateRegion : candidateRegions) {
       int i = candidateRegion.getLow();
-      // TODO i + |A|
-      int j = i + hashesInRead.size();
+      int j = i + sketchSize;
 
-      Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
-      getMinimizers(reference, i, j)
-          .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
+      // Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
+      Set<Hash> hashToAppearanceInBothReads = new HashSet<>(getMinimizers(reference, i, j));
+          // .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
 
       result.addAll(newPairs(i, hashToAppearanceInBothReads));
       for (; i <= candidateRegion.getHigh(); i++, j++) {
         getMinimizers(reference, i, i + 1).forEach(hashToAppearanceInBothReads::remove);
-        getMinimizers(reference, j, j + 1)
-            .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
+        hashToAppearanceInBothReads.addAll(getMinimizers(reference, j, j + 1));
+            // .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
 
         result.addAll(newPairs(i, hashToAppearanceInBothReads));
       }
@@ -114,6 +115,20 @@ public class ReadMapper {
 
     return result;
   }
+
+  private List<IndexJaccardPair> newPairs(int i, Set<Hash> hashToAppearanceInBothReads) {
+    double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
+    return jaccardEstimate >= tau
+        ? Collections.singletonList(new IndexJaccardPair(i, jaccardEstimate))
+        : Collections.emptyList();
+  }
+
+  private double solveJaccard(Set<Hash> hashes) {
+    // no limit
+    int sharedSketch = hashes.size();
+    return (1.0 * sharedSketch) / sketchSize;
+  }
+
 
   /**
    * @return either a singleton or empty list
@@ -123,6 +138,12 @@ public class ReadMapper {
     return jaccardEstimate >= tau
         ? Collections.singletonList(new IndexJaccardPair(i, jaccardEstimate))
         : Collections.emptyList();
+  }
+
+  private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
+    // no limit
+    int sharedSketch = hashToAppearance.values().stream().mapToInt(i -> i).sum();
+    return (1.0 * sharedSketch) / sketchSize;
   }
 
   private List<Hash> getMinimizers(
@@ -144,10 +165,5 @@ public class ReadMapper {
     int i = Collections.binarySearch(
         index, new MinimizerValue(startingKey, null), Comparator.comparingInt(intComparator));
     return i < 0 ? -i : i;
-  }
-
-  private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
-    int sharedSketch = hashToAppearance.values().stream().limit(sketchSize).mapToInt(i -> i).sum();
-    return 1.0 * sharedSketch / sketchSize;
   }
 }
