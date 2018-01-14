@@ -115,6 +115,9 @@ public class ReadMapper {
     return result;
   }
 
+  /**
+   * @return either a singleton or empty list
+   */
   private List<IndexJaccardPair> newPairs(int i, Map<Hash, Integer> hashToAppearanceInBothReads) {
     double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
     return jaccardEstimate >= tau

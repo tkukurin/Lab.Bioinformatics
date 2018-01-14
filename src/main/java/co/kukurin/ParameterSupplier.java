@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.rabinfingerprint.polynomial.Polynomial;
 
-@Builder
 @Getter
 public class ParameterSupplier {
 
@@ -25,9 +24,11 @@ public class ParameterSupplier {
   private final int queryLength;
   private final int sketchSize;
 
-  public ParameterSupplier(ConstantParameters constantParameters, String query) {
+  public ParameterSupplier(ConstantParameters constantParameters, String query, int sketchSize) {
     this.constantParameters = constantParameters;
     this.queryLength = query.length();
+    // this.sketchSize = sketchSize;
+
     this.sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
   }
 

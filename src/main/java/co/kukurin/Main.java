@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.logging.Logger;
 import org.rabinfingerprint.polynomial.Polynomial;
 import org.yeastrc.fasta.FASTAEntry;
@@ -37,38 +38,57 @@ public class Main {
           ConstantParameters.builder()
               .fingerprintingPolynomial(Polynomial.createIrreducible(/*degree=*/ 53))
               .stringToByteArrayConverter(String::getBytes)
+              // set identical parameters as current impl of MashMap does
               .windowSize(90)
               .kmerSize(16)
-              .tau(0.035)
+              // tau = G(e_max, k) - delta
+              // with delta ~0.01
+              .tau(0.03)
               .build();
 
-      Minimizer minimizer = new Minimizer(constantParameters.getWindowSize());
+      Minimizer minimizer = new Minimizer(
+          constantParameters.getWindowSize(),
+          constantParameters.getKmerSize());
       Hasher hasher =
           new Hasher(
               constantParameters.getFingerprintingPolynomial(),
               constantParameters.getStringToByteArrayConverter(),
               constantParameters.getKmerSize());
 
+      long startTime = System.currentTimeMillis();
+
+      // retain reference minimizers for efficient computation of W(B_i)
+      // 4.2. "we store W(B) as an array M of tuples (h, pos)"
       String referenceFilename = args[0];
       String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
-      List<Hash> referenceHashes = hasher.getUniqueSortedHashes(reference);
+      List<Hash> referenceHashes = hasher.hash(reference);
       List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
 
+      // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
+      // hashed value h, we laso replicate W(B) as a hash table H.
       Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
       logger.info("Number of hashes total: " + inverse.size());
 
       String queryFilename = args[1];
-      streamEntries(queryFilename).forEachRemaining(queryEntry -> {
+      long queryStartTime = System.currentTimeMillis();
+      streamFastaEntries(queryFilename).forEachRemaining(queryEntry -> {
         String query = queryEntry.getSequence();
 
-        logger.info("Mapping read " + queryEntry.getHeaderLine());
-        logger.info("Query length: " + query.length());
+        // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
+        List<Hash> queryHashes = hasher.hash(query);
+        TreeSet<Hash> uniqueHashes = new TreeSet<>(queryHashes);
+
+        ParameterSupplier parameterSupplier = new ParameterSupplier(
+            constantParameters, query, uniqueHashes.size());
+
+        // logger.info("Mapping read " + queryEntry.getHeaderLine());
+        // logger.info("Query length: " + query.length());
         out.println(queryEntry.getHeaderLine());
 
-        List<Hash> queryHashes = hasher.getUniqueSortedHashes(query);
-        ParameterSupplier parameterSupplier = new ParameterSupplier(constantParameters, query);
+        // Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
         ReadMapper readMapper =
-            new ReadMapper(parameterSupplier.getSketchSize(),
+            new ReadMapper(
+                parameterSupplier.getSketchSize(),
                 parameterSupplier.getConstantParameters().getTau());
 
         List<CandidateRegion> candidateRegions =
@@ -80,6 +100,10 @@ public class Main {
         pairs.stream().map(IndexJaccardPair::toString).forEach(out::println);
       });
 
+      long endTime = System.currentTimeMillis();
+      logger.info("Done");
+      logger.info("Total time: " + (endTime - startTime) / 1000.0 + "s");
+      logger.info("Query map time: " + (endTime - queryStartTime) / 1000.0 + "s");
     } catch (Exception e) {
       System.out.println("ERROR executing program:");
       System.out.println(e.getLocalizedMessage());
@@ -94,7 +118,7 @@ public class Main {
             ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / 1_000_000_000.0));
   }
 
-  private static Iterator<FASTAEntry> streamEntries(String queryFilename) throws Exception {
+  private static Iterator<FASTAEntry> streamFastaEntries(String queryFilename) throws Exception {
     FASTAReader reader = FASTAReader.getInstance(queryFilename);
     return new Iterator<FASTAEntry>() {
       FASTAEntry current;
