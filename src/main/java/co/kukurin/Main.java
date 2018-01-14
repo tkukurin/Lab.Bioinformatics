@@ -11,7 +11,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -52,23 +51,21 @@ public class Main {
 
       String referenceFilename = args[0];
       String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
-      List<MinimizerValue> referenceMinimizers = minimizer.minimize(hasher.hash(reference));
+      List<Hash> referenceHashes = hasher.getUniqueSortedHashes(reference);
+      List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
 
       Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
       logger.info("Number of hashes total: " + inverse.size());
 
       String queryFilename = args[1];
-      FASTAReader queryReader = FASTAReader.getInstance(queryFilename);
-
-      FASTAEntry queryEntry;
-      while ((queryEntry = queryReader.readNext()) != null) {
+      streamEntries(queryFilename).forEachRemaining(queryEntry -> {
         String query = queryEntry.getSequence();
 
         logger.info("Mapping read " + queryEntry.getHeaderLine());
         logger.info("Query length: " + query.length());
         out.println(queryEntry.getHeaderLine());
 
-        List<Hash> queryHashes = hasher.hash(query);
+        List<Hash> queryHashes = hasher.getUniqueSortedHashes(query);
         ParameterSupplier parameterSupplier = new ParameterSupplier(constantParameters, query);
         ReadMapper readMapper =
             new ReadMapper(parameterSupplier.getSketchSize(),
@@ -81,7 +78,7 @@ public class Main {
                 referenceMinimizers, queryHashes, candidateRegions);
 
         pairs.stream().map(IndexJaccardPair::toString).forEach(out::println);
-      }
+      });
 
     } catch (Exception e) {
       System.out.println("ERROR executing program:");
@@ -97,7 +94,8 @@ public class Main {
             ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / 1_000_000_000.0));
   }
 
-  private static Iterator<FASTAEntry> streamEntries(FASTAReader reader) {
+  private static Iterator<FASTAEntry> streamEntries(String queryFilename) throws Exception {
+    FASTAReader reader = FASTAReader.getInstance(queryFilename);
     return new Iterator<FASTAEntry>() {
       FASTAEntry current;
 

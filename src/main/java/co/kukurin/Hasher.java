@@ -1,7 +1,10 @@
 package co.kukurin;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -32,7 +35,7 @@ public class Hasher {
   private final Function<String, byte[]> stringToByteArrayConverter;
   private final int kmerSize;
 
-  public List<Hash> hash(String read) {
+  public List<Hash> getUniqueSortedHashes(String read) {
     int length = read.length();
 
     if (kmerSize > length) {
@@ -42,7 +45,7 @@ public class Hasher {
     RabinFingerprintLongWindowed rabinFingerprintLongWindowed =
         new RabinFingerprintLongWindowed(hashingPolynomial, kmerSize);
     byte[] bytesFromString = stringToByteArrayConverter.apply(read);
-    List<Hash> result = new ArrayList<>(bytesFromString.length - kmerSize + 1);
+    Set<Hash> result = new TreeSet<>();
 
     for (int i = 0; i < kmerSize; i++) {
       rabinFingerprintLongWindowed.pushByte(bytesFromString[i]);
@@ -54,6 +57,6 @@ public class Hasher {
       result.add(new Hash(rabinFingerprintLongWindowed));
     }
 
-    return result;
+    return new ArrayList<>(result);
   }
 }

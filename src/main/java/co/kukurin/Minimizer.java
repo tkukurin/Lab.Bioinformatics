@@ -31,8 +31,10 @@ public class Minimizer {
     minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
     for (int i = windowSize; i < hashes.size(); i++) {
       MinimizerValue minimizerValue = extractSmallestMinimizer(hashToLargestIndex);
-      if (minimizerValue.getOriginalIndex()
-          != minimizers.get(minimizers.size() - 1).getOriginalIndex()) {
+      boolean originalIndexAlreadyInMinimizers = minimizerValue.getOriginalIndex()
+          == minimizers.get(minimizers.size() - 1).getOriginalIndex();
+
+      if (!originalIndexAlreadyInMinimizers) {
         minimizers.add(minimizerValue);
       }
 
@@ -43,7 +45,7 @@ public class Minimizer {
       hashToLargestIndex.put(hashes.get(i), i);
     }
 
-    minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
+//    minimizers.add(extractSmallestMinimizer(hashToLargestIndex));
 
     return minimizers;
   }
