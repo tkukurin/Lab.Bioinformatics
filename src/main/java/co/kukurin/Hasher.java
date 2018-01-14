@@ -1,5 +1,6 @@
 package co.kukurin;
 
+import com.google.common.hash.Hashing;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -45,19 +46,24 @@ public class Hasher {
                 "This is probably an error, kmer too large.");
         }
 
-        RabinFingerprintLongWindowed rabinFingerprintLongWindowed =
-                new RabinFingerprintLongWindowed(hashingPolynomial, kmerSize);
+        // RabinFingerprintLongWindowed rabinFingerprintLongWindowed =
+        //         new RabinFingerprintLongWindowed(hashingPolynomial, kmerSize);
         byte[] bytesFromString = stringToByteArrayConverter.apply(read);
         List<Hash> result = new ArrayList<>(bytesFromString.length - kmerSize + 1);
 
+        com.google.common.hash.Hasher hasher = Hashing.murmur3_128().newHasher();
         for (int i = 0; i < kmerSize; i++) {
-            rabinFingerprintLongWindowed.pushByte(bytesFromString[i]);
+            hasher.putByte(bytesFromString[i]);
+            // rabinFingerprintLongWindowed.pushByte(bytesFromString[i]);
         }
 
-        result.add(new Hash(rabinFingerprintLongWindowed));
+        result.add(new Hash(hasher.hash().asLong()));
         for (int i = kmerSize; i < length; i++) {
-            rabinFingerprintLongWindowed.pushByte(bytesFromString[i]);
-            result.add(new Hash(rabinFingerprintLongWindowed));
+            hasher = Hashing.murmur3_128().newHasher();
+            hasher.putByte(bytesFromString[i]);
+            result.add(new Hash(hasher.hash().asLong()));
+            // rabinFingerprintLongWindowed.pushByte(bytesFromString[i]);
+            // result.add(new Hash(rabinFingerprintLongWindowed));
         }
 
         return result;

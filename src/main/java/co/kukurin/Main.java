@@ -7,10 +7,12 @@ import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -26,24 +28,26 @@ public class Main {
   private static final Logger logger = Logger.getLogger("Main");
 
   public static void main(String[] args) throws IOException {
+
     if (args.length != 2) {
       System.out.println("Expected usage: [program] [reference FASTA file] [query FASTA file]");
       System.exit(1);
     }
 
+    HashFunction hashFunction = Hashing.murmur3_128();
     try (FileOutputStream fos = new FileOutputStream("out.txt");
          PrintStream out = new PrintStream(fos)) {
 
       ConstantParameters constantParameters =
           ConstantParameters.builder()
-              .fingerprintingPolynomial(Polynomial.createIrreducible(/*degree=*/ 53))
+              .fingerprintingPolynomial(Polynomial.createIrreducible(/*degree=*/ 40))
               .stringToByteArrayConverter(String::getBytes)
               // set identical parameters as current impl of MashMap does
               .windowSize(90)
               .kmerSize(16)
               // tau = G(e_max, k) - delta
               // with delta ~0.01
-              .tau(0.03)
+              .tau(0.035)
               .build();
 
       Minimizer minimizer = new Minimizer(
@@ -61,7 +65,8 @@ public class Main {
       // 4.2. "we store W(B) as an array M of tuples (h, pos)"
       String referenceFilename = args[0];
       String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
-      List<Hash> referenceHashes = hasher.hash(reference);
+      List<Hash> referenceHashes = extractHashes(new FastaBufferedReader(referenceFilename, 16));
+      // List<Hash> referenceHashes = hasher.hash(reference);
       List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
 
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
@@ -111,11 +116,15 @@ public class Main {
     }
   }
 
-  private static void logMemoryUsage() {
-    logger.info(
-        String.format(
-            "Heap memory usage: %s gb",
-            ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / 1_000_000_000.0));
+  private static List<Hash> extractHashes(FastaBufferedReader r) throws IOException {
+    List<Hash> hashes = new ArrayList<>();
+    HashFunction hashFunction = Hashing.murmur3_128();
+    for (Iterator<Character> iterable = r.readNext(); iterable.hasNext(); iterable = r.readNext()) {
+      com.google.common.hash.Hasher hasher = hashFunction.newHasher();
+      iterable.forEachRemaining(hasher::putChar);
+      hashes.add(new Hash(hasher.hash().asLong()));
+    }
+    return hashes;
   }
 
   private static Iterator<FASTAEntry> streamFastaEntries(String queryFilename) throws Exception {
