@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.Iterator;
 
+/**
+ * Buffered reader for efficient reading of k-mers from a file.
+ */
 public class FastaKmerBufferedReader {
 
   private final BufferedReader bufferedReader;
@@ -21,6 +24,11 @@ public class FastaKmerBufferedReader {
     this.kmerSize = kmerSize;
   }
 
+  /**
+   * @return next k-mer obtained from file, e.g. contents of "abc" with k-mer = 2 will return
+   *  (a, b), (b, c). If there are no more items to be read, will return an iterator whose
+   *  Iterator#hasNext value immediately returns false.
+   */
   public Iterator<Character> readNext() throws IOException {
     int readValue = nextNonWhitespace();
 

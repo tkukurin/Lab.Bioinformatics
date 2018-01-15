@@ -1,20 +1,21 @@
 package co.kukurin;
 
-import java.util.function.Function;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
-import org.rabinfingerprint.polynomial.Polynomial;
 
+/**
+ * Container for algorithm parameter values.
+ */
 @Getter
 public class ParameterSupplier {
 
+  /**
+   * Container for algorithm parameters unaffected by query details.
+   */
   @Builder
   @Getter
   public static class ConstantParameters {
 
-    private Polynomial fingerprintingPolynomial;
-    private Function<String, byte[]> stringToByteArrayConverter;
     private int windowSize;
     private int kmerSize;
     private double tau;
@@ -27,7 +28,7 @@ public class ParameterSupplier {
   public ParameterSupplier(ConstantParameters constantParameters, String query, int sketchSize) {
     this.constantParameters = constantParameters;
     this.queryLength = query.length();
-    // this.sketchSize = sketchSize;
+//    this.sketchSize = sketchSize;
 
     this.sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
   }

@@ -24,15 +24,22 @@ import org.rabinfingerprint.polynomial.Polynomial;
 import org.yeastrc.fasta.FASTAEntry;
 import org.yeastrc.fasta.FASTAReader;
 
+/**
+ * Program entry point.
+ */
 public class Main {
 
   private static final Logger logger = Logger.getLogger("Main");
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
 
+  /**
+   * @param args Reference and query file in FASTA format. Reference file contains a single read
+   * while query file can contain multiple reads.
+   */
   public static void main(String[] args) throws IOException {
 
     if (args.length != 2) {
-      System.out.println("Expected usage: [program] [reference FASTA file] [query FASTA file]");
+      System.out.println("Expected parameters: [reference FASTA file] [query FASTA file]");
       System.exit(1);
     }
 
@@ -41,8 +48,6 @@ public class Main {
 
       ConstantParameters constantParameters =
           ConstantParameters.builder()
-              .fingerprintingPolynomial(Polynomial.createIrreducible(/*degree=*/ 40))
-              .stringToByteArrayConverter(String::getBytes)
               // set identical parameters as current impl of MashMap does
               .windowSize(90)
               .kmerSize(16)
@@ -51,9 +56,7 @@ public class Main {
               .tau(0.035)
               .build();
 
-      Minimizer minimizer = new Minimizer(
-          constantParameters.getWindowSize(),
-          constantParameters.getKmerSize());
+      Minimizer minimizer = new Minimizer(constantParameters.getWindowSize());
       ReadHasher hasher = new ReadHasher(constantParameters.getKmerSize());
 
       long startTime = System.currentTimeMillis();
@@ -61,8 +64,6 @@ public class Main {
       // retain reference minimizers for efficient computation of W(B_i)
       // 4.2. "we store W(B) as an array M of tuples (h, pos)"
       String referenceFilename = args[0];
-      // String reference = FASTAReader.getInstance(referenceFilename).readNext().getSequence();
-      // List<Hash> referenceHashes = hasher.hash(reference);
       List<Hash> referenceHashes = extractHashes(new FastaKmerBufferedReader(
           new FileReader(referenceFilename), constantParameters.getKmerSize()));
       List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
@@ -85,11 +86,7 @@ public class Main {
         ParameterSupplier parameterSupplier = new ParameterSupplier(
             constantParameters, query, uniqueHashes.size());
 
-        // logger.info("Mapping read " + queryEntry.getHeaderLine());
-        // logger.info("Query length: " + query.length());
         out.println(queryEntry.getHeaderLine());
-
-        // Sketcher sketcher = new Sketcher(parameterSupplier.getSketchSize());
         ReadMapper readMapper =
             new ReadMapper(
                 parameterSupplier.getSketchSize(),

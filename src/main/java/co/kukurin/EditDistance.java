@@ -2,6 +2,9 @@ package co.kukurin;
 
 import java.util.stream.IntStream;
 
+/**
+ * Class to compute edit distance.
+ */
 public class EditDistance {
 
   public static int calculate(String s1, String s2) {

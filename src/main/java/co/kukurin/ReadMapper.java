@@ -18,9 +18,15 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.Value;
 
+/**
+ * Performs read mapping of values.
+ */
 @Value
 public class ReadMapper {
 
+  /**
+   * Represents a candidate region, i.e. (low, high) indices.
+   */
   @Value
   @ToString
   @EqualsAndHashCode
@@ -30,6 +36,9 @@ public class ReadMapper {
     private int high;
   }
 
+  /**
+   * Tuple consisting of (index of estimate, Jaccard estimate) values.
+   */
   @Value
   @ToString
   public static class IndexJaccardPair {
@@ -38,16 +47,20 @@ public class ReadMapper {
     private double jaccardEstimate;
   }
 
-  private static final Logger logger = Logger.getLogger("ReadMapper");
-
   private final int sketchSize;
   private final double tau;
 
+  /**
+   * @param queryHashes Hashes obtained from query read.
+   * @param hashToReferenceReadIndices map [hash value -> list of indices where the hash is found
+   *  in the reference read]
+   * @return candidate regions which are estimated to evaluate to desired Jaccard values.
+   */
   public List<CandidateRegion> collectCandidateRegions(
-      Set<Hash> readHashes, Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
+      Set<Hash> queryHashes, Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
     int m = (int) Math.ceil(sketchSize * tau);
     List<Integer> sortedIndicesInReference =
-        readHashes
+        queryHashes
             .stream()
             .filter(hashToReferenceReadIndices::containsKey)
             .flatMap(val -> hashToReferenceReadIndices.get(val).stream())
@@ -83,6 +96,14 @@ public class ReadMapper {
     return region.getHigh() >= low;
   }
 
+  /**
+   * Final step in the mapping, collects similar regions.
+   * @param reference Minimizer values collected from reference read.
+   * @param hashesInRead Unused?
+   * @param candidateRegions Candidate regions obtained from
+   *  {@link #collectCandidateRegions(Set, Map)}
+   * @return List of (index, Jaccard value) pairs
+   */
   public List<IndexJaccardPair> collectLikelySimilarRegions(
       List<MinimizerValue> reference,
       List<Hash> hashesInRead,
@@ -128,7 +149,6 @@ public class ReadMapper {
     int sharedSketch = hashes.size();
     return (1.0 * sharedSketch) / sketchSize;
   }
-
 
   /**
    * @return either a singleton or empty list
