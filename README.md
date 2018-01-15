@@ -7,7 +7,7 @@ Paper describing the implemented algorithm can be found
 the original C++ implementation is [on GitHub](https://github.com/marbl/MashMap).
 
 ## Installation
-The project has a dependency on [https://github.com/yeastrc/java-fasta-utils](FASTA Utils), which
+The project has a dependency on [FASTA utils](https://github.com/yeastrc/java-fasta-utils), which
 can be found in the `./lib` directory. In order to install the program, first run from the project
 root:
 
