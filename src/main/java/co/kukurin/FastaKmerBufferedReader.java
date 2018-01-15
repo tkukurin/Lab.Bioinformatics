@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Iterator;
+import lombok.Getter;
 
 /**
  * Buffered reader for efficient reading of k-mers from a file.
@@ -17,6 +18,7 @@ public class FastaKmerBufferedReader {
   private char[] values;
   private int valuesIter = -1;
 
+  @Getter
   private String header;
 
   public FastaKmerBufferedReader(Reader reader, int kmerSize) throws FileNotFoundException {

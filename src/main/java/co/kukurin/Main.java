@@ -1,8 +1,8 @@
 package co.kukurin;
 
-import co.kukurin.ReadHasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
+import co.kukurin.ReadHasher.Hash;
 import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.logging.Logger;
-import org.rabinfingerprint.polynomial.Polynomial;
 import org.yeastrc.fasta.FASTAEntry;
 import org.yeastrc.fasta.FASTAReader;
 

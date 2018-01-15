@@ -7,7 +7,6 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import org.rabinfingerprint.fingerprint.RabinFingerprintLongWindowed;
 
 /**
  * Obtains k-mer hashes for string reads.
@@ -23,10 +22,6 @@ public class ReadHasher {
 
     Hash(long hash) {
       this.hash = hash;
-    }
-
-    Hash(RabinFingerprintLongWindowed rabinFingerprintLongWindowed) {
-      this.hash = rabinFingerprintLongWindowed.getFingerprintLong();
     }
 
     @Override

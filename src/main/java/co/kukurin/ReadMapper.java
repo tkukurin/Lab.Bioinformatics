@@ -1,7 +1,7 @@
 package co.kukurin;
 
-import co.kukurin.ReadHasher.Hash;
 import co.kukurin.Minimizer.MinimizerValue;
+import co.kukurin.ReadHasher.Hash;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.ToIntFunction;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
