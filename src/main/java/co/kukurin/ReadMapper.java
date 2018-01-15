@@ -165,6 +165,7 @@ public class ReadMapper {
     return (1.0 * sharedSketch) / sketchSize;
   }
 
+  // TODO sth here is wrong
   private List<Hash> getMinimizers(
       List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
     int i = binaryFindIndexOfFirstGteValue(

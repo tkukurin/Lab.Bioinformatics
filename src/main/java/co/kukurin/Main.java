@@ -1,5 +1,6 @@
 package co.kukurin;
 
+import co.kukurin.FastaKmerBufferedReader.SequenceIterator;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
 import co.kukurin.ReadHasher.Hash;
@@ -8,11 +9,13 @@ import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -42,7 +45,9 @@ public class Main {
       System.exit(1);
     }
 
-    try (FileOutputStream fos = new FileOutputStream("out.txt");
+    String queryPath = Paths.get(args[1]).getFileName().toString();
+
+    try (FileOutputStream fos = new FileOutputStream(queryPath + "-out.txt");
          PrintStream out = new PrintStream(fos)) {
 
       ConstantParameters constantParameters =
@@ -113,11 +118,15 @@ public class Main {
 
   private static List<Hash> extractHashes(FastaKmerBufferedReader reader) throws IOException {
     List<Hash> hashes = new ArrayList<>();
-    for (Iterator<Character> i = reader.readNext(); i.hasNext(); i = reader.readNext()) {
-      com.google.common.hash.Hasher hasher = HASH_FUNCTION.newHasher();
-      i.forEachRemaining(hasher::putChar);
+    SequenceIterator sequenceIterator = reader.next();
+
+    for (Iterator<Character> iterator = sequenceIterator.readNext();
+          iterator.hasNext(); iterator = sequenceIterator.readNext()) {
+      Hasher hasher = HASH_FUNCTION.newHasher();
+      iterator.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));
     }
+
     return hashes;
   }
 
