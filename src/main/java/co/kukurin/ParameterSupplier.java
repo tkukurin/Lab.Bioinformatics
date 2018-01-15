@@ -33,4 +33,10 @@ public class ParameterSupplier {
     this.sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
   }
 
+  public ParameterSupplier(ConstantParameters constantParameters, int queryLength, int sketchSize) {
+    this.constantParameters = constantParameters;
+    this.queryLength = queryLength;
+    this.sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
+  }
+
 }

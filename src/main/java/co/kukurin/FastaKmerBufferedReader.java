@@ -1,18 +1,21 @@
 package co.kukurin;
 
-import co.kukurin.FastaKmerBufferedReader.SequenceIterator;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.util.Iterator;
+import java.util.Optional;
 import lombok.Getter;
 
 /**
  * Buffered reader for efficient reading of k-mers from a file.
+ *
+ * <p>Reader returns {@link KmerSequenceGenerator} instances on each new invocation of the
+ * {@link #next()} method.
  */
-public class FastaKmerBufferedReader implements Iterator<SequenceIterator> {
+public class FastaKmerBufferedReader implements AutoCloseable {
 
   private static final Iterator<Character> EMPTY_ITERATOR = new Iterator<Character>() {
     @Override
@@ -26,17 +29,38 @@ public class FastaKmerBufferedReader implements Iterator<SequenceIterator> {
     }
   };
 
-  class SequenceIterator {
+  @Override
+  public void close() throws Exception {
+    this.bufferedReader.close();
+  }
+
+  /**
+   * Generator of k-mer sequences from {@link FastaKmerBufferedReader}'s internal
+   * {@link BufferedReader}. E.g. for a sequence read "AAT" and k-mer size of 2, this generator
+   * will return iterators over the following characters:
+   *
+   * <ol>
+   *   <li>(A, A)</li>
+   *   <li>(A, T)</li>
+   * </ol>
+   */
+  class KmerSequenceGenerator {
     @Getter
     private String header;
-
     private char[] values;
-    private int valuesIter = -1;
+    private int valuesIter;
+    private int totalReadBytes;
 
-    private SequenceIterator(String header) {
+    private KmerSequenceGenerator(String header) {
       this.header = header;
+      this.totalReadBytes = 0;
+      this.valuesIter = -1;
     }
 
+    /**
+     * @return next k-mer from read sequence. If there are no more k-mers to be read, will
+     * return iterator that always returns false to hasNext calls.
+     */
     Iterator<Character> readNext() throws IOException {
       int readValue = nextNonWhitespace();
 
@@ -46,25 +70,25 @@ public class FastaKmerBufferedReader implements Iterator<SequenceIterator> {
       }
 
       if (readValue == -1) {
-        eof = true;
         return EMPTY_ITERATOR;
       }
 
       if (values == null) {
         values = new char[kmerSize];
         values[0] = (char) readValue;
-        int size = bufferedReader.read(values, 1, kmerSize - 1);
 
+        int size = bufferedReader.read(values, 1, kmerSize - 1);
         if (size < kmerSize - 1) {
           throw new IOException("Read not large enough (k=" + kmerSize + ")");
         }
 
+        totalReadBytes = kmerSize;
         return charBufIterator(0);
       }
 
       valuesIter = (valuesIter + 1) % kmerSize;
       values[valuesIter] = (char) readValue;
-
+      totalReadBytes++;
       return charBufIterator((valuesIter + 1) % kmerSize);
     }
 
@@ -86,39 +110,37 @@ public class FastaKmerBufferedReader implements Iterator<SequenceIterator> {
         }
       };
     }
+
+    public int totalReadBytes() {
+      return totalReadBytes;
+    }
   }
 
   private final BufferedReader bufferedReader;
   private final int kmerSize;
-  private boolean eof;
 
   public FastaKmerBufferedReader(Reader reader, int kmerSize) throws FileNotFoundException {
     this.bufferedReader = new BufferedReader(reader);
     this.kmerSize = kmerSize;
-    this.eof = false;
-  }
-
-  @Override
-  public boolean hasNext() {
-    return !eof;
   }
 
   /**
-   * @return next k-mer obtained from file, e.g. contents of "abc" with k-mer = 2 will return (a,
-   * b), (b, c). If there are no more items to be read, will return an iterator whose
-   * Iterator#hasNext value immediately returns false.
+   * @return next {@link KmerSequenceGenerator} instance. Will read a header line and return
+   * a {@link KmerSequenceGenerator} which reads k-mers in a streaming fashion from the source.
+   *
+   * <p>The returned {@link KmerSequenceGenerator} instance must be exhausted before calling
+   * {@link #next()} a second time.
    */
-  @Override
-  public SequenceIterator next() {
+  public Optional<KmerSequenceGenerator> next() {
     try {
       int readValue = nextNonWhitespace();
 
       if (readValue == -1) {
-        throw new IOException("Reached end of file");
+        return Optional.empty();
       }
 
       if (readValue == '>') {
-        return new SequenceIterator(bufferedReader.readLine().trim());
+        return Optional.of(new KmerSequenceGenerator(bufferedReader.readLine().trim()));
       }
 
       throw new IOException("Bad file format");
