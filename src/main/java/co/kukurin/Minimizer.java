@@ -8,9 +8,15 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
+/**
+ * Minimizes a read.
+ */
 @AllArgsConstructor
 public class Minimizer {
 
+  /**
+   * Class which contains (Index, Hash) pairs used as minimizer outputs.
+   */
   @Value
   public static class MinimizerValue implements Comparable<MinimizerValue> {
 
@@ -22,15 +28,19 @@ public class Minimizer {
       int hashCompare = value.compareTo(o.value);
 
       return hashCompare == 0
-          ? Integer.compare(originalIndex, o.originalIndex)
+          ? Integer.compare(o.originalIndex, originalIndex)
           : hashCompare;
     }
   }
 
-  // private final int sketchSize;
   private final int windowSize;
-  private final int kmerSize; // TODO unused (paper algo. computes hash + minimizes at once)
 
+  /**
+   * @param hashes List of hashes obtained from a read.
+   * @return List of minimizer values, whose index distance is at most (windowSize - 1). A minimizer
+   * is defined to be a value with smallest hash or (in case of hash equality) largest index within
+   * a window.
+   */
   public List<MinimizerValue> minimize(List<Hash> hashes) {
     Deque<MinimizerValue> deque = new ArrayDeque<>(windowSize);
     List<MinimizerValue> minimizers = new ArrayList<>();

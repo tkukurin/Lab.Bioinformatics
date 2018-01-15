@@ -2,6 +2,9 @@ package co.kukurin;
 
 import java.util.stream.IntStream;
 
+/**
+ * Class to compute edit distance.
+ */
 public class EditDistance {
 
   public static int calculate(String s1, String s2) {
@@ -20,7 +23,7 @@ public class EditDistance {
       for (int j = 1; j <= s1.length(); j++) {
         int matching = s1.charAt(j - 1) != s2.charAt(i - 1) ? 1 : 0;
         newCount[j] = IntStream.of(count[j - 1] + matching, // swap
-            newCount[j - 1] + 1,     // move "right" = insertion in s2
+            newCount[j - 1] + 1,     // move "header" = insertion in s2
             count[j] + 1             // move "down" = deletion from s2
         ).min().getAsInt();
       }

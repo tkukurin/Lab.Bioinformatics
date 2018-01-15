@@ -14,7 +14,7 @@ public class MinimizerTest {
   @Test
   public void minimizer_ordered_shouldKeepWindow() throws Exception {
     // given
-    Minimizer minimizer = new Minimizer(3, 1);
+    Minimizer minimizer = new Minimizer(3);
     List<Hash> hashes = Stream.of(1, 2, 3, 4, 5, 6).map(Hash::new).collect(Collectors.toList());
 
     // when
@@ -31,7 +31,7 @@ public class MinimizerTest {
   @Test
   public void minimizer_unordered_shouldKeepValue() throws Exception {
     // given
-    Minimizer minimizer = new Minimizer(3, 1);
+    Minimizer minimizer = new Minimizer(3);
     List<Hash> hashes = Stream.of(3, 2, 1, 4, 5, 6).map(Hash::new).collect(Collectors.toList());
 
     // when
@@ -51,7 +51,7 @@ public class MinimizerTest {
   @Test
   public void minimizer_hashesEqual_shouldKeepLargestIndex() throws Exception {
     // given
-    Minimizer minimizer = new Minimizer(3, 1);
+    Minimizer minimizer = new Minimizer(3);
     List<Hash> hashes = Stream.of(1, 1, 1, 1, 1, 1).map(Hash::new).collect(Collectors.toList());
 
     // when
@@ -77,7 +77,7 @@ public class MinimizerTest {
   @Test
   public void minimizer_paperExample_shouldValidate() throws Exception {
     // given
-    Minimizer minimizer = new Minimizer(5, 1);
+    Minimizer minimizer = new Minimizer(5);
     List<Hash> hashes = Stream.of(77, 74, 17, 42, 97, 50, 17, 98, 6)
         .map(Hash::new).collect(Collectors.toList());
 

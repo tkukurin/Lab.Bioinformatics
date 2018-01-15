@@ -1,49 +1,57 @@
 package co.kukurin;
 
-import co.kukurin.ReadHasher.Hash;
+import co.kukurin.FastaKmerBufferedReader.SequenceIterator;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
+import co.kukurin.ReadHasher.Hash;
 import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
-import org.rabinfingerprint.polynomial.Polynomial;
 import org.yeastrc.fasta.FASTAEntry;
 import org.yeastrc.fasta.FASTAReader;
 
+/**
+ * Program entry point.
+ */
 public class Main {
 
   private static final Logger logger = Logger.getLogger("Main");
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
 
+  /**
+   * @param args Reference and query file in FASTA format. Reference file contains a single read
+   * while query file can contain multiple reads.
+   */
   public static void main(String[] args) throws IOException {
+
     if (args.length != 2) {
-      System.err.println("Expected usage: [program] [reference FASTA file] [query FASTA file]");
+      System.out.println("Expected parameters: [reference FASTA file] [query FASTA file]");
       System.exit(1);
     }
 
-    try (FileOutputStream fos = new FileOutputStream("out.txt");
+    String queryPath = Paths.get(args[1]).getFileName().toString();
+
+    try (FileOutputStream fos = new FileOutputStream(queryPath + "-out.txt");
          PrintStream out = new PrintStream(fos)) {
 
       ConstantParameters constantParameters =
           ConstantParameters.builder()
-              .fingerprintingPolynomial(Polynomial.createIrreducible(/*degree=*/ 40))
-              .stringToByteArrayConverter(String::getBytes)
               // set identical parameters as current impl of MashMap does
               .windowSize(90)
               .kmerSize(16)
@@ -52,9 +60,7 @@ public class Main {
               .tau(0.035)
               .build();
 
-      Minimizer minimizer = new Minimizer(
-          constantParameters.getWindowSize(),
-          constantParameters.getKmerSize());
+      Minimizer minimizer = new Minimizer(constantParameters.getWindowSize());
       ReadHasher hasher = new ReadHasher(constantParameters.getKmerSize());
 
       long startTime = System.currentTimeMillis();
@@ -67,22 +73,24 @@ public class Main {
       List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
 
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
-      // hashed value h, we laso replicate W(B) as a hash table H."
+      // hashed value h, we laso replicate W(B) as a hash table H.
       Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
       logger.info("Number of hashes total: " + inverse.size());
 
       String queryFilename = args[1];
       long queryStartTime = System.currentTimeMillis();
       readAllFasta(queryFilename).forEachRemaining(queryEntry -> {
-        out.println(queryEntry.getHeaderLine());
         String query = queryEntry.getSequence();
 
-        List<Hash> queryHashes = hasher.hash(query);
-        Set<Hash> uniqueHashes = new HashSet<>(queryHashes);
-
         // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
+        List<Hash> queryHashes = hasher.hash(query);
+        logger.info("Query hashes: " + queryHashes.size());
+        TreeSet<Hash> uniqueHashes = new TreeSet<>(queryHashes);
+
         ParameterSupplier parameterSupplier = new ParameterSupplier(
             constantParameters, query, uniqueHashes.size());
+
+        out.println(queryEntry.getHeaderLine());
         ReadMapper readMapper =
             new ReadMapper(
                 parameterSupplier.getSketchSize(),
@@ -102,19 +110,23 @@ public class Main {
       logger.info("Total time: " + (endTime - startTime) / 1000.0 + "s");
       logger.info("Query map time: " + (endTime - queryStartTime) / 1000.0 + "s");
     } catch (Exception e) {
-      System.err.println("ERROR executing program:");
-      System.err.println(e.getLocalizedMessage());
+      System.out.println("ERROR executing program:");
+      System.out.println(e.getLocalizedMessage());
       System.exit(1);
     }
   }
 
   private static List<Hash> extractHashes(FastaKmerBufferedReader reader) throws IOException {
     List<Hash> hashes = new ArrayList<>();
-    for (Iterator<Character> i = reader.nextKmer(); i.hasNext(); i = reader.nextKmer()) {
-      com.google.common.hash.Hasher hasher = HASH_FUNCTION.newHasher();
-      i.forEachRemaining(hasher::putChar);
+    SequenceIterator sequenceIterator = reader.next();
+
+    for (Iterator<Character> iterator = sequenceIterator.readNext();
+          iterator.hasNext(); iterator = sequenceIterator.readNext()) {
+      Hasher hasher = HASH_FUNCTION.newHasher();
+      iterator.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));
     }
+
     return hashes;
   }
 
