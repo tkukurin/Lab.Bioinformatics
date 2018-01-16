@@ -6,6 +6,7 @@ import co.kukurin.ParameterSupplier.ConstantParameters;
 import co.kukurin.ReadHasher.Hash;
 import co.kukurin.ReadMapper.CandidateRegion;
 import co.kukurin.ReadMapper.IndexJaccardPair;
+import co.kukurin.ReadMapper.ReadMapperResult;
 import co.kukurin.benchmarking.Benchmark;
 import co.kukurin.benchmarking.PrintStreamBenchmark;
 import co.kukurin.benchmarking.TimeBenchmark;
@@ -102,19 +103,17 @@ public class Main {
             constantParameters, kmerGenerator.totalReadBytes(), uniqueHashes.size());
 
         out.println(kmerGenerator.getHeader());
-        ReadMapper readMapper =
-            new ReadMapper(
-                parameterSupplier.getSketchSize(),
-                parameterSupplier.getConstantParameters().getTau());
 
+        ReadMapper readMapper = new ReadMapper(parameterSupplier);
         List<CandidateRegion> candidateRegions =
             readMapper.collectCandidateRegions(uniqueHashes, inverse);
-        List<IndexJaccardPair> pairs =
-            readMapper.collectLikelySimilarRegions(
+        Optional<ReadMapperResult> resultOptional =
+            readMapper.findMostLikelyMatch(
                 referenceMinimizers, queryHashes, candidateRegions);
 
         benchmark.logMemoryUsage();
-        pairs.stream().map(IndexJaccardPair::toString).forEach(out::println);
+        resultOptional.ifPresent(result -> out.println(
+            String.format("%s | %s", result.getIndex(), result.getNucIdentity())));
       }
 
       queryMapBenchmark.logTime();
@@ -133,7 +132,7 @@ public class Main {
   private static List<Hash> extractHashes(KmerSequenceGenerator kmerSequenceGenerator) throws IOException {
     List<Hash> hashes = new ArrayList<>();
     for (Iterator<Character> iterator = kmerSequenceGenerator.readNext();
-        iterator.hasNext(); iterator = kmerSequenceGenerator.readNext()) {
+         iterator.hasNext(); iterator = kmerSequenceGenerator.readNext()) {
       Hasher hasher = HASH_FUNCTION.newHasher();
       iterator.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));

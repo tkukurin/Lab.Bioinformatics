@@ -29,11 +29,6 @@ public class FastaKmerBufferedReader implements AutoCloseable {
     }
   };
 
-  @Override
-  public void close() throws Exception {
-    this.bufferedReader.close();
-  }
-
   /**
    * Generator of k-mer sequences from {@link FastaKmerBufferedReader}'s internal
    * {@link BufferedReader}. E.g. for a sequence read "AAT" and k-mer size of 2, this generator
@@ -45,12 +40,12 @@ public class FastaKmerBufferedReader implements AutoCloseable {
    * </ol>
    */
   class KmerSequenceGenerator {
+
     @Getter
     private String header;
     private char[] values;
     private int valuesIter;
     private int totalReadBytes;
-
     private KmerSequenceGenerator(String header) {
       this.header = header;
       this.totalReadBytes = 0;
@@ -147,6 +142,11 @@ public class FastaKmerBufferedReader implements AutoCloseable {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  @Override
+  public void close() throws Exception {
+    this.bufferedReader.close();
   }
 
   private int nextNonWhitespace() throws IOException {
