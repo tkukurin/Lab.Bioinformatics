@@ -74,6 +74,7 @@ public class ReadMapper {
     int sketchSize = parameterSupplier.getSketchSize();
     double tau = parameterSupplier.getConstantParameters().getTau();
     int m = (int) Math.ceil(sketchSize * tau);
+    System.out.println(m);
     List<Integer> sortedIndicesInReference =
         queryHashes
             .stream()

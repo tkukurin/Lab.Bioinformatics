@@ -66,12 +66,12 @@ public class Main {
             .tau(0.035)
             .build();
 
-    try (FileOutputStream fos = new FileOutputStream(queryPath + "-out.txt");
-        PrintStream out = new PrintStream(fos);
-        FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
+    try (PrintStream out = new PrintStream(new FileOutputStream(queryPath + "-out.txt"));
+         FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
             new FileReader(referenceFilename), constantParameters.getKmerSize());
-        FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
-            new FileReader(queryFilename), constantParameters.getKmerSize())) {
+         FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
+            new FileReader(queryFilename), constantParameters.getKmerSize());
+         PrintStream benchmarkOut = new PrintStream(new FileOutputStream(queryPath + "-benchmark.txt"))) {
 
       long startTime = System.currentTimeMillis();
       PrintStreamBenchmark timeBenchmark = new PrintStreamBenchmark(
@@ -79,7 +79,7 @@ public class Main {
           () -> String.format("%.2f s", (System.currentTimeMillis() - startTime) / 1000.0));
       Timer benchmarkTimer = new Timer("BenchmarkTimer", true);
       benchmarkTimer.scheduleAtFixedRate(
-          getBenchmarks(true), TimeUnit.SECONDS.toMillis(0), TimeUnit.SECONDS.toMillis(1));
+          getBenchmarks(benchmarkOut), TimeUnit.SECONDS.toMillis(0), TimeUnit.SECONDS.toMillis(1));
 
       Minimizer minimizer = new Minimizer(constantParameters.getWindowSize());
 
@@ -123,9 +123,9 @@ public class Main {
     }
   }
 
-  private static CompositeBenchmark getBenchmarks(boolean useDummyImplementation)
+  private static CompositeBenchmark getBenchmarks(PrintStream outStream)
       throws IOException {
-    if (useDummyImplementation) {
+    if (outStream == null) {
       return new CompositeDummyBenchmark();
     }
 
@@ -141,7 +141,7 @@ public class Main {
     PrintStreamBenchmark cpuBenchmark = new PrintStreamBenchmark("Cpu", () ->
         String.format("%.2f", osMBean.getProcessCpuLoad()));
 
-    return new CompositeBenchmarkImpl(System.err, cpuBenchmark, memoryBenchmark);
+    return new CompositeBenchmarkImpl(outStream, cpuBenchmark, memoryBenchmark);
   }
 
   private static List<Hash> extractHashes(FastaKmerBufferedReader reader) throws IOException {
