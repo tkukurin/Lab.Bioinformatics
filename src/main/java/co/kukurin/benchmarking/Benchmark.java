@@ -1,5 +1,12 @@
 package co.kukurin.benchmarking;
 
-public interface Benchmark extends TimeBenchmark, MemoryBenchmark {
+import java.io.PrintStream;
+
+/**
+ * Generic benchmark.
+ */
+public interface Benchmark {
+
+  void log(PrintStream output);
 
 }

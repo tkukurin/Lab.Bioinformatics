@@ -1,4 +1,4 @@
-package co.kukurin.fasta;
+package co.kukurin;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -29,11 +29,6 @@ public class FastaKmerBufferedReader implements AutoCloseable {
     }
   };
 
-  @Override
-  public void close() throws Exception {
-    this.bufferedReader.close();
-  }
-
   /**
    * Generator of k-mer sequences from {@link FastaKmerBufferedReader}'s internal
    * {@link BufferedReader}. E.g. for a sequence read "AAT" and k-mer size of 2, this generator
@@ -44,7 +39,8 @@ public class FastaKmerBufferedReader implements AutoCloseable {
    *   <li>(A, T)</li>
    * </ol>
    */
-  public class KmerSequenceGenerator {
+  class KmerSequenceGenerator {
+
     @Getter
     private String header;
     private char[] values;
@@ -61,7 +57,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
      * @return next k-mer from read sequence. If there are no more k-mers to be read, will
      * return iterator that always returns false to hasNext calls.
      */
-    public Iterator<Character> readNext() throws IOException {
+    Iterator<Character> readNext() throws IOException {
       int readValue = nextNonWhitespace();
 
       if (readValue == '>') {
@@ -75,18 +71,13 @@ public class FastaKmerBufferedReader implements AutoCloseable {
 
       if (values == null) {
         values = new char[kmerSize];
+        values[0] = (char) readValue;
 
-        int size = 0;
-        do {
-          values[size++] = (char) readValue;
-          readValue = nextNonWhitespace();
-        } while (readValue != -1 && size < values.length);
-
-        if (size < kmerSize) {
+        int size = bufferedReader.read(values, 1, kmerSize - 1);
+        if (size < kmerSize - 1) {
           throw new IOException("Read not large enough (k=" + kmerSize + ")");
         }
 
-        bufferedReader.reset();
         totalReadBytes = kmerSize;
         return charBufIterator(0);
       }
@@ -116,6 +107,9 @@ public class FastaKmerBufferedReader implements AutoCloseable {
       };
     }
 
+    /**
+     * @return total read bytes from sequence so far.
+     */
     public int totalReadBytes() {
       return totalReadBytes;
     }
@@ -134,7 +128,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
    * a {@link KmerSequenceGenerator} which reads k-mers in a streaming fashion from the source.
    *
    * <p>The returned {@link KmerSequenceGenerator} instance must be exhausted before calling
-   * {@link #next()} a second time.
+   * {@link #next()} a second time, otherwise behavior is undefined.
    */
   public Optional<KmerSequenceGenerator> next() {
     try {
@@ -152,6 +146,11 @@ public class FastaKmerBufferedReader implements AutoCloseable {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  @Override
+  public void close() throws Exception {
+    this.bufferedReader.close();
   }
 
   private int nextNonWhitespace() throws IOException {
