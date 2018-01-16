@@ -1,6 +1,7 @@
 package co.kukurin;
 
-import co.kukurin.FastaKmerBufferedReader.KmerSequenceGenerator;
+import co.kukurin.fasta.FastaKmerBufferedReader;
+import co.kukurin.fasta.FastaKmerBufferedReader.KmerSequenceGenerator;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
 import co.kukurin.ReadHasher.Hash;
@@ -14,6 +15,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -34,7 +36,7 @@ import java.util.logging.Logger;
 public class Main {
 
   private static final Logger logger = Logger.getLogger("Main");
-  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
+  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(/*seed=*/ 42);
 
   /**
    * @param args Reference and query file in FASTA format. Reference file contains a single read
@@ -90,8 +92,8 @@ public class Main {
       queryMapBenchmark.setStart();
 
       for (Optional<KmerSequenceGenerator> queryEntryOptional = queryReader.next();
-          queryEntryOptional.isPresent();
-          queryEntryOptional = queryReader.next()) {
+           queryEntryOptional.isPresent();
+           queryEntryOptional = queryReader.next()) {
         KmerSequenceGenerator kmerGenerator = queryEntryOptional.get();
 
         // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
@@ -102,11 +104,8 @@ public class Main {
             constantParameters, kmerGenerator.totalReadBytes(), uniqueHashes.size());
 
         out.println(kmerGenerator.getHeader());
-        ReadMapper readMapper =
-            new ReadMapper(
-                parameterSupplier.getSketchSize(),
-                parameterSupplier.getConstantParameters().getTau());
 
+        ReadMapper readMapper = new ReadMapper(parameterSupplier);
         List<CandidateRegion> candidateRegions =
             readMapper.collectCandidateRegions(uniqueHashes, inverse);
         List<IndexJaccardPair> pairs =
@@ -133,7 +132,8 @@ public class Main {
   private static List<Hash> extractHashes(KmerSequenceGenerator kmerSequenceGenerator) throws IOException {
     List<Hash> hashes = new ArrayList<>();
     for (Iterator<Character> iterator = kmerSequenceGenerator.readNext();
-        iterator.hasNext(); iterator = kmerSequenceGenerator.readNext()) {
+         iterator.hasNext();
+         iterator = kmerSequenceGenerator.readNext()) {
       Hasher hasher = HASH_FUNCTION.newHasher();
       iterator.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));
@@ -143,10 +143,8 @@ public class Main {
 
   private static Map<Hash, Collection<Integer>> inverse(List<MinimizerValue> indexHash) {
     Multimap<Hash, Integer> result = ArrayListMultimap.create();
-    for (int i = 0; i < indexHash.size(); i++) {
-      MinimizerValue minimizerValue = indexHash.get(i);
-      result.put(minimizerValue.getValue(), minimizerValue.getOriginalIndex());
-    }
+    indexHash.forEach(minimizerValue ->
+        result.put(minimizerValue.getValue(), minimizerValue.getOriginalIndex()));
     return result.asMap();
   }
 }

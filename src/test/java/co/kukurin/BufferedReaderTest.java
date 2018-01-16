@@ -3,7 +3,8 @@ package co.kukurin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-import co.kukurin.FastaKmerBufferedReader.KmerSequenceGenerator;
+import co.kukurin.fasta.FastaKmerBufferedReader;
+import co.kukurin.fasta.FastaKmerBufferedReader.KmerSequenceGenerator;
 import java.io.StringReader;
 import org.junit.Test;
 

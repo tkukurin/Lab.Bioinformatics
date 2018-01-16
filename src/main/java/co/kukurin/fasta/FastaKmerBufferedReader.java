@@ -1,4 +1,4 @@
-package co.kukurin;
+package co.kukurin.fasta;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -44,7 +44,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
    *   <li>(A, T)</li>
    * </ol>
    */
-  class KmerSequenceGenerator {
+  public class KmerSequenceGenerator {
     @Getter
     private String header;
     private char[] values;
@@ -61,7 +61,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
      * @return next k-mer from read sequence. If there are no more k-mers to be read, will
      * return iterator that always returns false to hasNext calls.
      */
-    Iterator<Character> readNext() throws IOException {
+    public Iterator<Character> readNext() throws IOException {
       int readValue = nextNonWhitespace();
 
       if (readValue == '>') {
@@ -75,13 +75,18 @@ public class FastaKmerBufferedReader implements AutoCloseable {
 
       if (values == null) {
         values = new char[kmerSize];
-        values[0] = (char) readValue;
 
-        int size = bufferedReader.read(values, 1, kmerSize - 1);
-        if (size < kmerSize - 1) {
+        int size = 0;
+        do {
+          values[size++] = (char) readValue;
+          readValue = nextNonWhitespace();
+        } while (readValue != -1 && size < values.length);
+
+        if (size < kmerSize) {
           throw new IOException("Read not large enough (k=" + kmerSize + ")");
         }
 
+        bufferedReader.reset();
         totalReadBytes = kmerSize;
         return charBufIterator(0);
       }

@@ -3,15 +3,11 @@ package co.kukurin;
 import lombok.Builder;
 import lombok.Getter;
 
-/**
- * Container for algorithm parameter values.
- */
+/** Container for algorithm parameter values. */
 @Getter
 public class ParameterSupplier {
 
-  /**
-   * Container for algorithm parameters unaffected by query details.
-   */
+  /** Container for algorithm parameters unaffected by query details. */
   @Builder
   @Getter
   public static class ConstantParameters {
@@ -25,14 +21,7 @@ public class ParameterSupplier {
   private final int queryLength;
   private final int sketchSize;
 
-  public ParameterSupplier(ConstantParameters constantParameters, String query, int sketchSize) {
-    this.constantParameters = constantParameters;
-    this.queryLength = query.length();
-//    this.sketchSize = sketchSize;
-
-    this.sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
-  }
-
+  // TODO what with sketch size?
   public ParameterSupplier(ConstantParameters constantParameters, int queryLength, int sketchSize) {
     this.constantParameters = constantParameters;
     this.queryLength = queryLength;

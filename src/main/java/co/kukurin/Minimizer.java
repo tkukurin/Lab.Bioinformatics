@@ -24,6 +24,7 @@ public class Minimizer {
     private final Hash value;
 
     @Override
+    // compares hashes lo - hi, and indices hi - lo
     public int compareTo(MinimizerValue o) {
       int hashCompare = value.compareTo(o.value);
 

@@ -46,8 +46,7 @@ public class ReadMapper {
     private double jaccardEstimate;
   }
 
-  private final int sketchSize;
-  private final double tau;
+  private final ParameterSupplier parameterSupplier;
 
   /**
    * @param queryHashes Hashes obtained from query read.
@@ -57,7 +56,9 @@ public class ReadMapper {
    */
   public List<CandidateRegion> collectCandidateRegions(
       Set<Hash> queryHashes, Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
-    int m = (int) Math.ceil(sketchSize * tau);
+    int sketchSize = parameterSupplier.getSketchSize();
+    double tau = parameterSupplier.getConstantParameters().getTau();
+    int minimumMatching = (int) Math.ceil(sketchSize * tau);
     List<Integer> sortedIndicesInReference =
         queryHashes
             .stream()
@@ -66,17 +67,16 @@ public class ReadMapper {
             .sorted()
             .collect(Collectors.toList());
     Stack<CandidateRegion> result = new Stack<>();
-    for (int i = 0; i <= sortedIndicesInReference.size() - m; i++) {
-      int j = i + (m - 1);
+    for (int i = 0; i <= sortedIndicesInReference.size() - minimumMatching; i++) {
+      int j = i + (minimumMatching - 1);
       int indexHi = sortedIndicesInReference.get(j);
       int indexLo = sortedIndicesInReference.get(i);
 
-      // sketchSize == |A|
       // indexHi and indexLo represent indices in reference read B.
-      // size of intersect(A, B) in B from L[i] to L[j] is constant (= m).
-      // therefore, if range(i, j) is < |A|, jaccard similarity is expected to be > tau in
+      // size of intersect(A, B) in B from L[i] to L[j] is constant (= minimumMatching).
+      // therefore, if range(i, j) is < |A|, Jaccard similarity is expected to be > tau in
       // read B from index position (L[j] - |A|).
-      int minDistance = sketchSize;
+      int minDistance = parameterSupplier.getQueryLength();
       if (indexHi - indexLo < minDistance) {
         int low = indexHi - minDistance + 1;
 
@@ -107,29 +107,19 @@ public class ReadMapper {
       List<MinimizerValue> reference,
       List<Hash> hashesInRead,
       List<CandidateRegion> candidateRegions) {
+    int sketchSize = parameterSupplier.getSketchSize();
+    int countMinimizerWindows = parameterSupplier.getQueryLength()
+        - (parameterSupplier.getConstantParameters().getWindowSize() - 1)
+        - (parameterSupplier.getConstantParameters().getKmerSize() - 1);
+
     List<IndexJaccardPair> result = new ArrayList<>();
-    // TODO not sure if I need this anymore?
-    // Map<Hash, Integer> hashesInReadToZero =
-    //     hashesInRead
-    //         .stream()
-    //         .distinct()
-    //         .collect(Collectors.toMap(Function.identity(), ignored -> 0));
 
     for (CandidateRegion candidateRegion : candidateRegions) {
       int i = candidateRegion.getLow();
-      int j = i + sketchSize;
+      int j = i + countMinimizerWindows;
 
-      // Map<Hash, Integer> hashToAppearanceInBothReads = new HashMap<>(hashesInReadToZero);
-      Set<Hash> hashToAppearanceInBothReads = new HashSet<>(getMinimizers(reference, i, j));
-          // .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
-
-      result.addAll(newPairs(i, hashToAppearanceInBothReads));
       for (; i <= candidateRegion.getHigh(); i++, j++) {
-        getMinimizers(reference, i, i + 1).forEach(hashToAppearanceInBothReads::remove);
-        hashToAppearanceInBothReads.addAll(getMinimizers(reference, j, j + 1));
-            // .forEach(hash -> hashToAppearanceInBothReads.merge(hash, 0, (k, v) -> 1));
 
-        result.addAll(newPairs(i, hashToAppearanceInBothReads));
       }
     }
 
@@ -138,7 +128,7 @@ public class ReadMapper {
 
   private List<IndexJaccardPair> newPairs(int i, Set<Hash> hashToAppearanceInBothReads) {
     double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
-    return jaccardEstimate >= tau
+    return jaccardEstimate >= parameterSupplier.getConstantParameters().getTau()
         ? Collections.singletonList(new IndexJaccardPair(i, jaccardEstimate))
         : Collections.emptyList();
   }
@@ -146,36 +136,18 @@ public class ReadMapper {
   private double solveJaccard(Set<Hash> hashes) {
     // no limit
     int sharedSketch = hashes.size();
-    return (1.0 * sharedSketch) / sketchSize;
+    return (1.0 * sharedSketch) / parameterSupplier.getSketchSize();
   }
 
-  /**
-   * @return either a singleton or empty list
-   */
-  private List<IndexJaccardPair> newPairs(int i, Map<Hash, Integer> hashToAppearanceInBothReads) {
-    double jaccardEstimate = solveJaccard(hashToAppearanceInBothReads);
-    return jaccardEstimate >= tau
-        ? Collections.singletonList(new IndexJaccardPair(i, jaccardEstimate))
-        : Collections.emptyList();
-  }
-
-  private double solveJaccard(Map<Hash, Integer> hashToAppearance) {
-    // no limit
-    int sharedSketch = hashToAppearance.values().stream().mapToInt(i -> i).sum();
-    return (1.0 * sharedSketch) / sketchSize;
-  }
 
   // TODO sth here is wrong
-  private List<Hash> getMinimizers(
+  private List<MinimizerValue> getMinimizers(
       List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
     int i = binaryFindIndexOfFirstGteValue(
         reference, MinimizerValue::getOriginalIndex, lowInclusive);
-
-    List<Hash> result = new ArrayList<>();
-    while (i < reference.size() && reference.get(i).getOriginalIndex() < highExclusive) {
-      result.add(reference.get(i++).getValue());
-    }
-    return result;
+    int j = binaryFindIndexOfFirstGteValue(
+        reference, MinimizerValue::getOriginalIndex, highExclusive);
+    return reference.subList(i, j);
   }
 
   private int binaryFindIndexOfFirstGteValue(
