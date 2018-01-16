@@ -1,4 +1,4 @@
-package co.kukurin;
+package co.kukurin.fasta;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -39,7 +39,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
    *   <li>(A, T)</li>
    * </ol>
    */
-  class KmerSequenceGenerator {
+   public class KmerSequenceGenerator {
 
     @Getter
     private String header;
@@ -57,7 +57,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
      * @return next k-mer from read sequence. If there are no more k-mers to be read, will
      * return iterator that always returns false to hasNext calls.
      */
-    Iterator<Character> readNext() throws IOException {
+    public Iterator<Character> readNext() throws IOException {
       int readValue = nextNonWhitespace();
 
       if (readValue == '>') {

@@ -3,7 +3,6 @@ package co.kukurin;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ReadHasher.Hash;
 import co.kukurin.stat.StatUtils;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -74,7 +73,7 @@ public class ReadMapper {
     int sketchSize = parameterSupplier.getSketchSize();
     double tau = parameterSupplier.getConstantParameters().getTau();
     int m = (int) Math.ceil(sketchSize * tau);
-    System.out.println(m);
+//    System.out.println(m);
     List<Integer> sortedIndicesInReference =
         queryHashes
             .stream()
@@ -129,46 +128,43 @@ public class ReadMapper {
       int windowEnd = windowStart + parameterSupplier.getQueryLength();
 
       // TODO possibly a treemap
-      Iterator<MinimizerValue> minimizerIndices =
-          getMinimizerIndices(reference, windowStart, windowEnd);
+      Iterator<MinimizerValue> minimizerIterator = getMinimizerIterator(reference, windowStart);
       TreeSet<MinimizerValue> minimizers = new TreeSet<>(
           Comparator.comparingInt(MinimizerValue::getOriginalIndex));
 
       MinimizerValue nextMinimizer = null;
-      while (minimizerIndices.hasNext()) {
-        nextMinimizer = minimizerIndices.next();
+      while (minimizerIterator.hasNext()) {
+        nextMinimizer = minimizerIterator.next();
 
         if (nextMinimizer.getOriginalIndex() >= windowEnd) {
           break;
         }
+
+        minimizers.add(nextMinimizer);
       }
 
-      int skip;
-      for (; windowStart <= candidateRegion.getHigh(); windowStart += skip, windowEnd += skip) {
+      while(windowStart <= candidateRegion.getHigh()) {
         if (!minimizers.isEmpty() && minimizers.first().getOriginalIndex() <= windowStart) {
           minimizers.pollFirst();
         }
 
-        if (minimizerIndices.hasNext() && nextMinimizer != null) {
+        if (minimizerIterator.hasNext() && nextMinimizer != null) {
           minimizers.add(nextMinimizer);
-          nextMinimizer = minimizerIndices.next();
+          nextMinimizer = minimizerIterator.next();
         }
-
-        skip = minimizers.first().getOriginalIndex() - windowStart;
-        if (nextMinimizer != null) {
-          skip = Math.min(skip, nextMinimizer.getOriginalIndex() - windowEnd + 1);
-        }
-
-        // TODO we know positions, no need to recompute
-        // minimizers.addAll(getMinimizers(reference, windowEnd - 1, windowEnd));
-
-        // TODO now here we find query indices
-        // System.out.println(minimizers.size());
 
         if (minimizers.size() > maxMinimizers) {
           index = windowStart;
           maxMinimizers = minimizers.size();
         }
+
+        int skip = minimizers.first().getOriginalIndex() - windowStart;
+        if (nextMinimizer != null) {
+          skip = Math.min(skip, nextMinimizer.getOriginalIndex() - windowEnd + 1);
+        }
+
+        windowStart += skip;
+        windowEnd += skip;
       }
     }
 
@@ -179,24 +175,23 @@ public class ReadMapper {
         : Optional.of(StatUtils.toMapperResult(index, jaccard, kmerSize));
   }
 
-  private Iterator<MinimizerValue> getMinimizerIndices(
-    List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
+  private Iterator<MinimizerValue> getMinimizerIterator(
+    List<MinimizerValue> reference, int lowInclusive) {
     int i = binaryFindIndexOfFirstGteValue(
         reference, MinimizerValue::getOriginalIndex, lowInclusive);
-    int j = binaryFindIndexOfFirstGteValue(
-        reference, MinimizerValue::getOriginalIndex, highExclusive);
+//    int j = binaryFindIndexOfFirstGteValue(
+//        reference, MinimizerValue::getOriginalIndex, highExclusive);
     return new Iterator<MinimizerValue>() {
-      int index = i - 1;
+      int index = i;
 
       @Override
       public boolean hasNext() {
-        return index < reference.size() - 1;
+        return index < reference.size();
       }
 
       @Override
       public MinimizerValue next() {
-        index++;
-        return reference.get(index);
+        return reference.get(index++);
       }
     };
   }

@@ -1,6 +1,5 @@
 package co.kukurin;
 
-import co.kukurin.FastaKmerBufferedReader.KmerSequenceGenerator;
 import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
 import co.kukurin.ReadHasher.Hash;
@@ -9,16 +8,20 @@ import co.kukurin.benchmarking.CompositeBenchmark;
 import co.kukurin.benchmarking.CompositeBenchmarkImpl;
 import co.kukurin.benchmarking.CompositeDummyBenchmark;
 import co.kukurin.benchmarking.PrintStreamBenchmark;
+import co.kukurin.fasta.FastaKmerBufferedReader;
+import co.kukurin.fasta.FastaKmerBufferedReader.KmerSequenceGenerator;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.sun.management.OperatingSystemMXBean;
+import java.awt.image.ImagingOpException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -28,8 +31,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Timer;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.management.MBeanServerConnection;
 
 /**
@@ -85,7 +90,9 @@ public class Main {
 
       // retain reference minimizers for efficient computation of W(B_i)
       // 4.2. "we store W(B) as an array M of tuples (h, pos)"
-      List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceReader.next().get());
+      KmerSequenceGenerator referenceSequenceGenerator = referenceReader.next()
+          .orElseThrow(() -> new IOException("Invalid FASTA file " + referenceFilename));
+      List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceSequenceGenerator);
 
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
       // hashed value h, we laso replicate W(B) as a hash table H.
@@ -97,8 +104,10 @@ public class Main {
         KmerSequenceGenerator kmerGenerator = queryEntryOptional.get();
 
         // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
-        List<Hash> queryHashes = extractHashes(kmerGenerator);
-        HashSet<Hash> uniqueHashes = new HashSet<>(queryHashes);
+//        List<Hash> queryHashes = extractHashes(kmerGenerator);
+        List<MinimizerValue> queryHashes = minimizer.minimize(kmerGenerator);
+        Set<Hash> uniqueHashes = queryHashes.stream().map(MinimizerValue::getValue)
+            .collect(Collectors.toSet());
 
         ParameterSupplier parameterSupplier = new ParameterSupplier(
             constantParameters, kmerGenerator.totalReadBytes(), uniqueHashes.size());

@@ -26,7 +26,9 @@ public class ParameterSupplier {
     this.constantParameters = constantParameters;
     this.queryLength = queryLength;
     this.sketchSize = sketchSize;
-    // this.sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
+    System.out.println(sketchSize);
+    sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
+    System.out.println("vs " + sketchSize);
   }
 
 }

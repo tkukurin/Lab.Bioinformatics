@@ -2,8 +2,8 @@ package co.kukurin;
 
 import static co.kukurin.Main.HASH_FUNCTION;
 
-import co.kukurin.FastaKmerBufferedReader.KmerSequenceGenerator;
 import co.kukurin.ReadHasher.Hash;
+import co.kukurin.fasta.FastaKmerBufferedReader.KmerSequenceGenerator;
 import com.google.common.hash.Hasher;
 import java.io.IOException;
 import java.util.ArrayDeque;
