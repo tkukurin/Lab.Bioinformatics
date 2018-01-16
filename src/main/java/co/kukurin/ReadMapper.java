@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
+import java.util.TreeSet;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
@@ -127,20 +128,17 @@ public class ReadMapper {
       int windowStart = candidateRegion.getLow();
       int windowEnd = windowStart + parameterSupplier.getQueryLength();
 
-      int nMinimizerWindows = parameterSupplier.getQueryLength()
-          - (parameterSupplier.getConstantParameters().getWindowSize() - 1)
-          - (parameterSupplier.getConstantParameters().getKmerSize() - 1);
-      int lastSuperWindowRangeEnd = windowEnd + parameterSupplier.getQueryLength();
-
       // TODO possibly a treemap
-      List<MinimizerValue> minimizers = getMinimizers(reference, windowStart, windowEnd);
+      TreeSet<MinimizerValue> minimizers = new TreeSet<>(
+          Comparator.comparingInt(MinimizerValue::getOriginalIndex));
+      minimizers.addAll(getMinimizers(reference, windowStart, windowEnd));
 
       for (; windowStart <= candidateRegion.getHigh(); windowStart++, windowEnd++) {
-        if (!minimizers.isEmpty() && minimizers.get(0).getOriginalIndex() <= windowStart) {
-          minimizers.remove(0);
+        if (!minimizers.isEmpty() && minimizers.first().getOriginalIndex() <= windowStart) {
+          minimizers.pollFirst();
         }
 
-        // this will be wrong because in the first iteration it will add the end twice
+        // TODO we know positions, no need to recompute
         minimizers.addAll(getMinimizers(reference, windowEnd - 1, windowEnd));
 
         // TODO now here we find query indices
@@ -166,6 +164,9 @@ public class ReadMapper {
         reference, MinimizerValue::getOriginalIndex, lowInclusive);
     int j = binaryFindIndexOfFirstGteValue(
         reference, MinimizerValue::getOriginalIndex, highExclusive);
+
+    i = Math.min(i, reference.size() - 1);
+    j = Math.min(j, reference.size());
 
     if (i > j)
       return Collections.emptyList();

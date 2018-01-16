@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.Timer;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import javax.management.MBeanServerConnection;
 
 /**
@@ -39,8 +38,7 @@ import javax.management.MBeanServerConnection;
  */
 public class Main {
 
-  private static final Logger logger = Logger.getLogger("Main");
-  public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
+  static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
 
   /**
    * @param args Reference and query file in FASTA format. Reference file contains a single read
@@ -121,6 +119,7 @@ public class Main {
     } catch (Exception e) {
       System.out.println("ERROR executing program:");
       System.out.println(e.getLocalizedMessage());
+      e.printStackTrace();
       System.exit(1);
     }
   }
