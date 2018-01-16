@@ -127,6 +127,11 @@ public class ReadMapper {
       int windowStart = candidateRegion.getLow();
       int windowEnd = windowStart + parameterSupplier.getQueryLength();
 
+      int nMinimizerWindows = parameterSupplier.getQueryLength()
+          - (parameterSupplier.getConstantParameters().getWindowSize() - 1)
+          - (parameterSupplier.getConstantParameters().getKmerSize() - 1);
+      int lastSuperWindowRangeEnd = windowEnd + parameterSupplier.getQueryLength();
+
       // TODO possibly a treemap
       List<MinimizerValue> minimizers = getMinimizers(reference, windowStart, windowEnd);
 
@@ -139,7 +144,7 @@ public class ReadMapper {
         minimizers.addAll(getMinimizers(reference, windowEnd - 1, windowEnd));
 
         // TODO now here we find query indices
-        System.out.println(minimizers.size());
+        // System.out.println(minimizers.size());
 
         if (minimizers.size() > maxMinimizers) {
           index = windowStart;
