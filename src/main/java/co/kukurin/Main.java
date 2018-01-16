@@ -5,7 +5,6 @@ import co.kukurin.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier.ConstantParameters;
 import co.kukurin.ReadHasher.Hash;
 import co.kukurin.ReadMapper.CandidateRegion;
-import co.kukurin.ReadMapper.ReadMapperResult;
 import co.kukurin.benchmarking.CompositeBenchmark;
 import co.kukurin.benchmarking.CompositeBenchmarkImpl;
 import co.kukurin.benchmarking.CompositeDummyBenchmark;
@@ -24,12 +23,12 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Timer;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import javax.management.MBeanServerConnection;
 
@@ -38,7 +37,7 @@ import javax.management.MBeanServerConnection;
  */
 public class Main {
 
-  static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(42);
+  static final HashFunction HASH_FUNCTION = Hashing.murmur3_128(/*seed=*/ 42);
 
   /**
    * @param args Reference and query file in FASTA format. Reference file contains a single read
@@ -62,43 +61,44 @@ public class Main {
             .windowSize(90)
             .kmerSize(16)
             // tau = G(e_max, k) - delta
-            // with delta ~0.01
+            // e_max = 0.15
+            // delta ~= 0.01
             .tau(0.035)
             .build();
 
     try (FileOutputStream fos = new FileOutputStream(queryPath + "-out.txt");
-         PrintStream out = new PrintStream(fos);
-         FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
-             new FileReader(referenceFilename), constantParameters.getKmerSize());
-         FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
-             new FileReader(queryFilename), constantParameters.getKmerSize())) {
+        PrintStream out = new PrintStream(fos);
+        FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
+            new FileReader(referenceFilename), constantParameters.getKmerSize());
+        FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
+            new FileReader(queryFilename), constantParameters.getKmerSize())) {
 
       long startTime = System.currentTimeMillis();
       PrintStreamBenchmark timeBenchmark = new PrintStreamBenchmark(
-          "Runtime", () -> String.format("%.2f s", (System.currentTimeMillis() - startTime) / 1000.0));
+          "Runtime",
+          () -> String.format("%.2f s", (System.currentTimeMillis() - startTime) / 1000.0));
       Timer benchmarkTimer = new Timer("BenchmarkTimer", true);
       benchmarkTimer.scheduleAtFixedRate(
-          getBenchmarks(false), TimeUnit.SECONDS.toMillis(0), TimeUnit.SECONDS.toMillis(1));
+          getBenchmarks(true), TimeUnit.SECONDS.toMillis(0), TimeUnit.SECONDS.toMillis(1));
 
       Minimizer minimizer = new Minimizer(constantParameters.getWindowSize());
 
       // retain reference minimizers for efficient computation of W(B_i)
       // 4.2. "we store W(B) as an array M of tuples (h, pos)"
-      List<Hash> referenceHashes = extractHashes(referenceReader);
-      List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceHashes);
+      List<MinimizerValue> referenceMinimizers = minimizer.minimize(referenceReader.next().get());
 
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
       // hashed value h, we laso replicate W(B) as a hash table H.
       Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
 
       for (Optional<KmerSequenceGenerator> queryEntryOptional = queryReader.next();
-           queryEntryOptional.isPresent();
-           queryEntryOptional = queryReader.next()) {
+          queryEntryOptional.isPresent();
+          queryEntryOptional = queryReader.next()) {
         KmerSequenceGenerator kmerGenerator = queryEntryOptional.get();
 
         // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
         List<Hash> queryHashes = extractHashes(kmerGenerator);
-        TreeSet<Hash> uniqueHashes = new TreeSet<>(queryHashes);
+        HashSet<Hash> uniqueHashes = new HashSet<>(queryHashes);
 
         ParameterSupplier parameterSupplier = new ParameterSupplier(
             constantParameters, kmerGenerator.totalReadBytes(), uniqueHashes.size());
@@ -106,15 +106,14 @@ public class Main {
         ReadMapper readMapper = new ReadMapper(parameterSupplier);
         List<CandidateRegion> candidateRegions =
             readMapper.collectCandidateRegions(uniqueHashes, inverse);
-        Optional<ReadMapperResult> resultOptional =
-            readMapper.findMostLikelyMatch(
-                referenceMinimizers, queryHashes, candidateRegions);
 
-        resultOptional.ifPresent(result -> {
-          out.print(kmerGenerator.getHeader());
-          out.println(String.format(" %s | %s", result.getIndex(), result.getNucIdentity()));
-        });
+        readMapper.findMostLikelyMatch(referenceMinimizers, candidateRegions)
+            .ifPresent(result -> {
+              out.print(kmerGenerator.getHeader());
+              out.println(String.format(" %s | %s", result.getIndex(), result.getNucIdentity()));
+            });
       }
+
       timeBenchmark.log(System.err);
     } catch (Exception e) {
       System.out.println("ERROR executing program:");
@@ -124,7 +123,8 @@ public class Main {
     }
   }
 
-  private static CompositeBenchmark getBenchmarks(boolean useDummyImplementation) throws IOException {
+  private static CompositeBenchmark getBenchmarks(boolean useDummyImplementation)
+      throws IOException {
     if (useDummyImplementation) {
       return new CompositeDummyBenchmark();
     }
@@ -138,9 +138,8 @@ public class Main {
     MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
     OperatingSystemMXBean osMBean = ManagementFactory.newPlatformMXBeanProxy(
         mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
-    PrintStreamBenchmark cpuBenchmark = new PrintStreamBenchmark("Cpu", () -> {
-      return String.format("%.2f", osMBean.getProcessCpuLoad());
-    });
+    PrintStreamBenchmark cpuBenchmark = new PrintStreamBenchmark("Cpu", () ->
+        String.format("%.2f", osMBean.getProcessCpuLoad()));
 
     return new CompositeBenchmarkImpl(System.err, cpuBenchmark, memoryBenchmark);
   }
@@ -149,10 +148,11 @@ public class Main {
     return extractHashes(reader.next().get());
   }
 
-  private static List<Hash> extractHashes(KmerSequenceGenerator kmerSequenceGenerator) throws IOException {
+  private static List<Hash> extractHashes(KmerSequenceGenerator kmerSequenceGenerator)
+      throws IOException {
     List<Hash> hashes = new ArrayList<>();
     for (Iterator<Character> iterator = kmerSequenceGenerator.readNext();
-         iterator.hasNext(); iterator = kmerSequenceGenerator.readNext()) {
+        iterator.hasNext(); iterator = kmerSequenceGenerator.readNext()) {
       Hasher hasher = HASH_FUNCTION.newHasher();
       iterator.forEachRemaining(hasher::putChar);
       hashes.add(new Hash(hasher.hash().asLong()));

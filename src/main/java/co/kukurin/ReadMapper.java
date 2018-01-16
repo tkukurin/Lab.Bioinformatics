@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,14 +113,12 @@ public class ReadMapper {
   /**
    * Final step in the mapping, finds best match.
    * @param reference Minimizer values collected from reference read.
-   * @param hashesInRead Unused?
    * @param candidateRegions Candidate regions obtained from
    *  {@link #collectCandidateRegions(Set, Map)}
    * @return Best estimated match.
    */
   public Optional<ReadMapperResult> findMostLikelyMatch(
       List<MinimizerValue> reference,
-      List<Hash> hashesInRead,
       List<CandidateRegion> candidateRegions) {
     int index = -1;
     int maxMinimizers = 0;
@@ -129,17 +128,38 @@ public class ReadMapper {
       int windowEnd = windowStart + parameterSupplier.getQueryLength();
 
       // TODO possibly a treemap
+      Iterator<MinimizerValue> minimizerIndices =
+          getMinimizerIndices(reference, windowStart, windowEnd);
       TreeSet<MinimizerValue> minimizers = new TreeSet<>(
           Comparator.comparingInt(MinimizerValue::getOriginalIndex));
-      minimizers.addAll(getMinimizers(reference, windowStart, windowEnd));
 
-      for (; windowStart <= candidateRegion.getHigh(); windowStart++, windowEnd++) {
+      MinimizerValue nextMinimizer = null;
+      while (minimizerIndices.hasNext()) {
+        nextMinimizer = minimizerIndices.next();
+
+        if (nextMinimizer.getOriginalIndex() >= windowEnd) {
+          break;
+        }
+      }
+
+      int skip;
+      for (; windowStart <= candidateRegion.getHigh(); windowStart += skip, windowEnd += skip) {
         if (!minimizers.isEmpty() && minimizers.first().getOriginalIndex() <= windowStart) {
           minimizers.pollFirst();
         }
 
+        if (minimizerIndices.hasNext() && nextMinimizer != null) {
+          minimizers.add(nextMinimizer);
+          nextMinimizer = minimizerIndices.next();
+        }
+
+        skip = minimizers.first().getOriginalIndex() - windowStart;
+        if (nextMinimizer != null) {
+          skip = Math.min(skip, nextMinimizer.getOriginalIndex() - windowEnd + 1);
+        }
+
         // TODO we know positions, no need to recompute
-        minimizers.addAll(getMinimizers(reference, windowEnd - 1, windowEnd));
+        // minimizers.addAll(getMinimizers(reference, windowEnd - 1, windowEnd));
 
         // TODO now here we find query indices
         // System.out.println(minimizers.size());
@@ -156,6 +176,28 @@ public class ReadMapper {
     return index == - 1
         ? Optional.empty()
         : Optional.of(StatUtils.toMapperResult(index, jaccard, kmerSize));
+  }
+
+  private Iterator<MinimizerValue> getMinimizerIndices(
+    List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
+    int i = binaryFindIndexOfFirstGteValue(
+        reference, MinimizerValue::getOriginalIndex, lowInclusive);
+    int j = binaryFindIndexOfFirstGteValue(
+        reference, MinimizerValue::getOriginalIndex, highExclusive);
+    return new Iterator<MinimizerValue>() {
+      int index = i - 1;
+
+      @Override
+      public boolean hasNext() {
+        return index < reference.size() - 1;
+      }
+
+      @Override
+      public MinimizerValue next() {
+        index++;
+        return reference.get(index);
+      }
+    };
   }
 
   private List<MinimizerValue> getMinimizers(

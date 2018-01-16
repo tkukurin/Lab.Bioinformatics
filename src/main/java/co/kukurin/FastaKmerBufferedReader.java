@@ -46,6 +46,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
     private char[] values;
     private int valuesIter;
     private int totalReadBytes;
+
     private KmerSequenceGenerator(String header) {
       this.header = header;
       this.totalReadBytes = 0;
@@ -106,6 +107,9 @@ public class FastaKmerBufferedReader implements AutoCloseable {
       };
     }
 
+    /**
+     * @return total read bytes from sequence so far.
+     */
     public int totalReadBytes() {
       return totalReadBytes;
     }
@@ -124,7 +128,7 @@ public class FastaKmerBufferedReader implements AutoCloseable {
    * a {@link KmerSequenceGenerator} which reads k-mers in a streaming fashion from the source.
    *
    * <p>The returned {@link KmerSequenceGenerator} instance must be exhausted before calling
-   * {@link #next()} a second time.
+   * {@link #next()} a second time, otherwise behavior is undefined.
    */
   public Optional<KmerSequenceGenerator> next() {
     try {
