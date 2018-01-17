@@ -22,8 +22,8 @@ You can run the program by issuing the command:
 java -jar ./target/bioinf-1.0-SNAPSHOT.jar [reference.fa] [query.fa]
 ```
 
-If everything goes well, read data should be output to `./query.fa-out.txt` (note that the FASTA
-file name is suffixed by `out.txt`.
+If everything goes well, read data should be output to `./[query-location].fa-out.txt` (note that
+the FASTA file name is just query filename suffixed by `-out.txt`.
 
 ## Testing
 If you would like to run a sample test of the functionality, under `./helpers` there are two

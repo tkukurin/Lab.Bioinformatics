@@ -61,7 +61,7 @@ class SketchMap {
     }
   }
 
-  /** Computes shared minimizers (i.e. A U B_i) recorded in this map. */
+  /** Computes shared sketches (i.e. A U B_i intersected with A and B_i) recorded in this map. */
   int getSharedMinimizers(int sketchSize) {
     return (int) map.values().stream().limit(sketchSize)
         .filter(info -> info.queryPosition != NOT_STORED && info.referencePosition != NOT_STORED)

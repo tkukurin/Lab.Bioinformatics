@@ -115,27 +115,30 @@ public class ReadMapper {
 
     for (CandidateRegion candidateRegion : candidateRegions) {
       int windowStart = candidateRegion.getLow();
-      int windowEnd = windowStart + parameterSupplier.getQueryLength();
+      // max potential elements stored during minimization
+      int windowEnd = windowStart + parameterSupplier.getQueryLength()
+          - parameterSupplier.getConstantParameters().getWindowSize() + 1
+          - parameterSupplier.getConstantParameters().getKmerSize() + 1;
 
       SketchMap sketchMap = new SketchMap(query);
-      int minimizersStart = binaryFindIndexOfFirstGteValue(
+      int minimizersStartIndex = binaryFindIndexOfFirstGteValue(
           reference, MinimizerValue::getOriginalIndex, windowStart);
-      int minimizersEnd = binaryFindIndexOfFirstGteValue(
+      int minimizersEndIndex = binaryFindIndexOfFirstGteValue(
           reference, MinimizerValue::getOriginalIndex, windowEnd);
 
       while(windowStart <= candidateRegion.getHigh()) {
         // throw out values leaving window
-        if (minimizersStart < reference.size()
-            && reference.get(minimizersStart).getOriginalIndex() <= windowStart) {
-          sketchMap.removeReference(reference.get(minimizersStart));
-          minimizersStart++;
+        if (minimizersStartIndex < reference.size()
+            && reference.get(minimizersStartIndex).getOriginalIndex() <= windowStart) {
+          sketchMap.removeReference(reference.get(minimizersStartIndex));
+          minimizersStartIndex++;
         }
 
         // insert values entering window
-        if (minimizersEnd < reference.size()
-            && reference.get(minimizersEnd).getOriginalIndex() <= windowEnd) {
-          sketchMap.putReference(reference.get(minimizersEnd));
-          minimizersEnd++;
+        if (minimizersEndIndex < reference.size()
+            && reference.get(minimizersEndIndex).getOriginalIndex() <= windowEnd) {
+          sketchMap.putReference(reference.get(minimizersEndIndex));
+          minimizersEndIndex++;
         }
 
         int sharedMinimizers = sketchMap.getSharedMinimizers(parameterSupplier.getSketchSize());
@@ -144,11 +147,11 @@ public class ReadMapper {
           maxMinimizers = sharedMinimizers;
         }
 
-        // skip until first following window with changes
-        int skip = reference.get(minimizersStart).getOriginalIndex() - windowStart;
-        if (minimizersEnd < reference.size()) {
-          skip = Math.min(skip, reference.get(minimizersEnd).getOriginalIndex() - windowEnd + 1);
-        }
+        // skip until first following window with
+        int deltaStart = reference.get(minimizersStartIndex).getOriginalIndex() - windowStart;
+        int deltaEnd = minimizersEndIndex < reference.size()
+            ? reference.get(minimizersEndIndex).getOriginalIndex() - windowEnd + 1 : 1;
+        int skip = Math.min(deltaStart, deltaEnd);
 
         windowStart += skip;
         windowEnd += skip;
