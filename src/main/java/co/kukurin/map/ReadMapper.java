@@ -156,7 +156,7 @@ public class ReadMapper {
     }
 
     int kmerSize = parameterSupplier.getConstantParameters().getKmerSize();
-    double jaccard = (1.0 * maxMinimizers) / parameterSupplier.getQueryLength();
+    double jaccard = (1.0 * maxMinimizers) / parameterSupplier.getSketchSize();
     return index == - 1
         ? Optional.empty()
         : Optional.of(StatUtils.toMapperResult(index, jaccard, kmerSize));

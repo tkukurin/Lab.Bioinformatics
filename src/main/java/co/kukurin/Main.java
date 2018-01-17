@@ -119,8 +119,9 @@ public class Main {
 
         readMapper.findMostLikelyMatch(referenceMinimizers, queryHashes, candidateRegions)
             .ifPresent(result -> {
-              out.print(kmerGenerator.getHeader());
-              out.println(String.format(" | position: %s | identity: %s",
+              out.print("> ");
+              out.println(kmerGenerator.getHeader());
+              out.println(String.format("position: %s | identity: %s",
                   result.getIndex(),
                   result.getNucIdentity()));
             });

@@ -44,14 +44,12 @@ class SketchMap {
     }
   }
 
-  public void removeReference(MinimizerValue minimizerValue) {
+  void removeReference(MinimizerValue minimizerValue) {
     Hash referenceHash = minimizerValue.getHash();
     int referencePosition = minimizerValue.getOriginalIndex();
 
     HashInfo existing = map.get(referenceHash);
-    if (existing == null) {
-      // TODO ?
-    } else if (existing.referencePosition == referencePosition) {
+    if (existing != null && existing.referencePosition == referencePosition) {
       if (existing.queryPosition == NOT_STORED) {
         map.remove(referenceHash);
       }
@@ -60,7 +58,7 @@ class SketchMap {
     }
   }
 
-  public int getSharedMinimizers(int sketchSize) {
+  int getSharedMinimizers(int sketchSize) {
     return (int) map.values().stream().limit(sketchSize)
         .filter(info -> info.queryPosition != NOT_STORED && info.referencePosition != NOT_STORED)
         .count();
