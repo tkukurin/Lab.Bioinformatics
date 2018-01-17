@@ -1,7 +1,8 @@
-package co.kukurin;
+package co.kukurin.map;
 
-import co.kukurin.Minimizer.MinimizerValue;
-import co.kukurin.ReadHasher.Hash;
+import co.kukurin.hash.Minimizer.MinimizerValue;
+import co.kukurin.ParameterSupplier;
+import co.kukurin.hash.Hash;
 import co.kukurin.stat.StatUtils;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,8 +61,7 @@ public class ReadMapper {
       Set<Hash> queryHashes, Map<Hash, Collection<Integer>> hashToReferenceReadIndices) {
     int sketchSize = parameterSupplier.getSketchSize();
     double tau = parameterSupplier.getConstantParameters().getTau();
-    int m = (int) Math.ceil(sketchSize * tau);
-//    System.out.println(m);
+    int minShared = (int) Math.ceil(sketchSize * tau);
     List<Integer> sortedIndicesInReference =
         queryHashes
             .stream()
@@ -70,13 +70,13 @@ public class ReadMapper {
             .sorted()
             .collect(Collectors.toList());
     Stack<CandidateRegion> result = new Stack<>();
-    for (int i = 0; i <= sortedIndicesInReference.size() - m; i++) {
-      int j = i + (m - 1);
+    for (int i = 0; i <= sortedIndicesInReference.size() - minShared; i++) {
+      int j = i + (minShared - 1);
       int indexHi = sortedIndicesInReference.get(j);
       int indexLo = sortedIndicesInReference.get(i);
 
       // indexHi and indexLo represent indices in reference read B.
-      // size of intersect(A, B) in B from L[i] to L[j] is constant (= m).
+      // size of intersect(A, B) in B from L[i] to L[j] is constant (= minShared).
       // therefore, if range(i, j) is < |A|, jaccard similarity is expected to be > tau in
       // read B from index position (L[j] - |A|).
       int minDistance = parameterSupplier.getQueryLength();
@@ -109,7 +109,6 @@ public class ReadMapper {
   public Optional<ReadMapperResult> findMostLikelyMatch(
       List<MinimizerValue> reference,
       List<MinimizerValue> query,
-      Set<Hash> queryHashes,
       List<CandidateRegion> candidateRegions) {
     int index = -1;
     int maxMinimizers = 0;
@@ -119,36 +118,23 @@ public class ReadMapper {
       int windowEnd = windowStart + parameterSupplier.getQueryLength();
 
       SketchMap sketchMap = new SketchMap(query);
-//      Iterator<MinimizerValue> minimizerIterator = iteratorFrom(reference, windowStart);
-      List<MinimizerValue> minimizers = reference;
-//          getMinimizers(reference, windowStart,
-//          reference.get(reference.size() - 1).getOriginalIndex()); // TODO
       int minimizersStart = binaryFindIndexOfFirstGteValue(
           reference, MinimizerValue::getOriginalIndex, windowStart);
       int minimizersEnd = binaryFindIndexOfFirstGteValue(
           reference, MinimizerValue::getOriginalIndex, windowEnd);
 
-//      MinimizerValue nextMinimizer = null;
-//      while (minimizerIterator.hasNext()) {
-//        nextMinimizer = minimizerIterator.next();
-//
-//        if (nextMinimizer.getOriginalIndex() >= windowEnd) {
-//          break;
-//        }
-//
-//        sketchMap.putReference(nextMinimizer);
-//      }
-
       while(windowStart <= candidateRegion.getHigh()) {
-        if (minimizersStart < minimizers.size()
-            && minimizers.get(minimizersStart).getOriginalIndex() <= windowStart) {
-          sketchMap.removeReference(minimizers.get(minimizersStart));
+        // throw out values leaving window
+        if (minimizersStart < reference.size()
+            && reference.get(minimizersStart).getOriginalIndex() <= windowStart) {
+          sketchMap.removeReference(reference.get(minimizersStart));
           minimizersStart++;
         }
 
-        if (minimizersEnd < minimizers.size()
-            && minimizers.get(minimizersEnd).getOriginalIndex() <= windowEnd) {
-          sketchMap.putReference(minimizers.get(minimizersEnd));
+        // insert values entering window
+        if (minimizersEnd < reference.size()
+            && reference.get(minimizersEnd).getOriginalIndex() <= windowEnd) {
+          sketchMap.putReference(reference.get(minimizersEnd));
           minimizersEnd++;
         }
 
@@ -158,9 +144,10 @@ public class ReadMapper {
           maxMinimizers = sharedMinimizers;
         }
 
-        int skip = minimizers.get(minimizersStart).getOriginalIndex() - windowStart;
-        if (minimizersEnd < minimizers.size()) {
-          skip = Math.min(skip, minimizers.get(minimizersEnd).getOriginalIndex() - windowEnd + 1);
+        // skip until first following window with changes
+        int skip = reference.get(minimizersStart).getOriginalIndex() - windowStart;
+        if (minimizersEnd < reference.size()) {
+          skip = Math.min(skip, reference.get(minimizersEnd).getOriginalIndex() - windowEnd + 1);
         }
 
         windowStart += skip;
@@ -173,49 +160,6 @@ public class ReadMapper {
     return index == - 1
         ? Optional.empty()
         : Optional.of(StatUtils.toMapperResult(index, jaccard, kmerSize));
-  }
-
-  private Iterator<MinimizerValue> iteratorFrom(
-    List<MinimizerValue> reference, int lowInclusive) {
-    int i = binaryFindIndexOfFirstGteValue(
-        reference, MinimizerValue::getOriginalIndex, lowInclusive);
-//    int j = binaryFindIndexOfFirstGteValue(
-//        reference, MinimizerValue::getOriginalIndex, highExclusive);
-    return new Iterator<MinimizerValue>() {
-      int index = i;
-
-      @Override
-      public boolean hasNext() {
-        return index < reference.size();
-      }
-
-      @Override
-      public MinimizerValue next() {
-        return reference.get(index++);
-      }
-    };
-  }
-
-  private List<MinimizerValue> getMinimizers(
-      List<MinimizerValue> reference, int lowInclusive, int highExclusive) {
-    int i = binaryFindIndexOfFirstGteValue(
-        reference, MinimizerValue::getOriginalIndex, lowInclusive);
-    int j = binaryFindIndexOfFirstGteValue(
-        reference, MinimizerValue::getOriginalIndex, highExclusive);
-
-    i = Math.min(i, reference.size() - 1);
-    j = Math.min(j, reference.size());
-
-    if (i > j)
-      return Collections.emptyList();
-
-    return reference.subList(i, j);
-
-    // List<Hash> result = new ArrayList<>();
-    // while (i < reference.size() && reference.get(i).getOriginalIndex() < highExclusive) {
-    //   result.add(reference.get(i++).getValue());
-    // }
-    // return result;
   }
 
   private int binaryFindIndexOfFirstGteValue(

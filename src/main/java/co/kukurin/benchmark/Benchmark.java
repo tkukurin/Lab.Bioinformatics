@@ -1,4 +1,4 @@
-package co.kukurin.benchmarking;
+package co.kukurin.benchmark;
 
 import java.io.PrintStream;
 

@@ -1,6 +1,6 @@
 package co.kukurin.stat;
 
-import co.kukurin.ReadMapper.ReadMapperResult;
+import co.kukurin.map.ReadMapper.ReadMapperResult;
 
 public class StatUtils {
 

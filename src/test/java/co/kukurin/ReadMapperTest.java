@@ -3,8 +3,9 @@ package co.kukurin;
 import static org.junit.Assert.assertEquals;
 
 import co.kukurin.ParameterSupplier.ConstantParameters;
-import co.kukurin.ReadHasher.Hash;
-import co.kukurin.ReadMapper.CandidateRegion;
+import co.kukurin.hash.Hash;
+import co.kukurin.map.ReadMapper;
+import co.kukurin.map.ReadMapper.CandidateRegion;
 import com.google.common.collect.ImmutableMap;
 import java.util.Arrays;
 import java.util.Collection;

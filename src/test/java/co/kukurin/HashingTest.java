@@ -2,7 +2,7 @@ package co.kukurin;
 
 import static co.kukurin.Main.HASH_FUNCTION;
 
-import co.kukurin.ReadHasher.Hash;
+import co.kukurin.hash.Hash;
 import com.google.common.collect.Iterables;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
@@ -47,26 +47,5 @@ public class HashingTest {
     long hash2 = hasher2.hash().asLong();
 
     Assert.assertNotEquals(hash1, hash2);
-  }
-
-
-  @Test
-  public void hasher_shouldReturnSameResultAsCharArray() throws Exception {
-    // given
-    String testString = "test string";
-    int kmerSize = testString.length();
-
-    Hasher hasher = function.newHasher();
-    ReadHasher readHasher = new ReadHasher(kmerSize);
-
-    // when
-    testString.chars().forEach(c -> hasher.putChar((char) c));
-    long hash1 = hasher.hash().asLong();
-
-    List<Hash> singletonList = readHasher.hash(testString);
-    long hash2 = Iterables.getOnlyElement(singletonList).getHash();
-
-    // then
-    Assert.assertEquals(hash1, hash2);
   }
 }

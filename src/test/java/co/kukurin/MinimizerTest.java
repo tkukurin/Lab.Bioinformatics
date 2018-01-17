@@ -2,8 +2,9 @@ package co.kukurin;
 
 import static org.junit.Assert.assertEquals;
 
-import co.kukurin.ReadHasher.Hash;
-import co.kukurin.Minimizer.MinimizerValue;
+import co.kukurin.hash.Hash;
+import co.kukurin.hash.Minimizer;
+import co.kukurin.hash.Minimizer.MinimizerValue;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,10 +23,10 @@ public class MinimizerTest {
 
     // then
     assertEquals(4, minimizerValues.size());
-    assertEquals(1, minimizerValues.get(0).getValue().getHash());
-    assertEquals(2, minimizerValues.get(1).getValue().getHash());
-    assertEquals(3, minimizerValues.get(2).getValue().getHash());
-    assertEquals(4, minimizerValues.get(3).getValue().getHash());
+    assertEquals(1, minimizerValues.get(0).getHash().getValue());
+    assertEquals(2, minimizerValues.get(1).getHash().getValue());
+    assertEquals(3, minimizerValues.get(2).getHash().getValue());
+    assertEquals(4, minimizerValues.get(3).getHash().getValue());
   }
 
   @Test
@@ -41,10 +42,10 @@ public class MinimizerTest {
     // windows: [ <hash 1, index 2>, <hash 4, index 3> ]
     assertEquals(2, minimizerValues.size());
 
-    assertEquals(1, minimizerValues.get(0).getValue().getHash());
+    assertEquals(1, minimizerValues.get(0).getHash().getValue());
     assertEquals(2, minimizerValues.get(0).getOriginalIndex());
 
-    assertEquals(4, minimizerValues.get(1).getValue().getHash());
+    assertEquals(4, minimizerValues.get(1).getHash().getValue());
     assertEquals(3, minimizerValues.get(1).getOriginalIndex());
   }
 
@@ -61,16 +62,16 @@ public class MinimizerTest {
     // windows: [ <hash 1, index 2>, <hash 1, index 3>,... ]
     assertEquals(4, minimizerValues.size());
 
-    assertEquals(1, minimizerValues.get(0).getValue().getHash());
+    assertEquals(1, minimizerValues.get(0).getHash().getValue());
     assertEquals(2, minimizerValues.get(0).getOriginalIndex());
 
-    assertEquals(1, minimizerValues.get(1).getValue().getHash());
+    assertEquals(1, minimizerValues.get(1).getHash().getValue());
     assertEquals(3, minimizerValues.get(1).getOriginalIndex());
 
-    assertEquals(1, minimizerValues.get(2).getValue().getHash());
+    assertEquals(1, minimizerValues.get(2).getHash().getValue());
     assertEquals(4, minimizerValues.get(2).getOriginalIndex());
 
-    assertEquals(1, minimizerValues.get(3).getValue().getHash());
+    assertEquals(1, minimizerValues.get(3).getHash().getValue());
     assertEquals(5, minimizerValues.get(3).getOriginalIndex());
   }
 
@@ -88,13 +89,13 @@ public class MinimizerTest {
     // windows: [ <hash 17, index 2>, <hash 17, index 6>, <hash 6, index 8> ]
     assertEquals(3, minimizerValues.size());
 
-    assertEquals(17, minimizerValues.get(0).getValue().getHash());
+    assertEquals(17, minimizerValues.get(0).getHash().getValue());
     assertEquals(2, minimizerValues.get(0).getOriginalIndex());
 
-    assertEquals(17, minimizerValues.get(1).getValue().getHash());
+    assertEquals(17, minimizerValues.get(1).getHash().getValue());
     assertEquals(6, minimizerValues.get(1).getOriginalIndex());
 
-    assertEquals(6, minimizerValues.get(2).getValue().getHash());
+    assertEquals(6, minimizerValues.get(2).getHash().getValue());
     assertEquals(8, minimizerValues.get(2).getOriginalIndex());
   }
 }

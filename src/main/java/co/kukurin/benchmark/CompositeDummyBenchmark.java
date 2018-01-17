@@ -1,4 +1,4 @@
-package co.kukurin.benchmarking;
+package co.kukurin.benchmark;
 
 /**
  * Dummy benchmark implementation if no logging is desired.

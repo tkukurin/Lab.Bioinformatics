@@ -21,14 +21,14 @@ public class ParameterSupplier {
   private final int queryLength;
   private final int sketchSize;
 
-  // TODO what with sketch size?
   public ParameterSupplier(ConstantParameters constantParameters, int queryLength, int sketchSize) {
     this.constantParameters = constantParameters;
     this.queryLength = queryLength;
     this.sketchSize = sketchSize;
-    System.out.println(sketchSize);
+
+    System.out.print(sketchSize);
     sketchSize = (int) (2.0 * queryLength / constantParameters.windowSize);
-    System.out.println("vs " + sketchSize);
+    System.out.println(" vs " + sketchSize);
   }
 
 }
