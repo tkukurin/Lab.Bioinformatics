@@ -8,13 +8,6 @@
   <artifactId>bioinf</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <repositories>
-    <repository>
-      <id>local-maven-repo</id>
-      <url>file:///${basedir}/lib</url>
-    </repository>
-  </repositories>
-
   <build>
     <plugins>
       <plugin>

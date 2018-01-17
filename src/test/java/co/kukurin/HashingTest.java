@@ -2,12 +2,9 @@ package co.kukurin;
 
 import static co.kukurin.Main.HASH_FUNCTION;
 
-import co.kukurin.hash.Hash;
-import com.google.common.collect.Iterables;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import java.nio.charset.Charset;
-import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
