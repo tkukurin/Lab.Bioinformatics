@@ -5,3 +5,4 @@ target
 *.fna
 *.fa
 *.fasta
+!genomes/clostridium/*.fa
