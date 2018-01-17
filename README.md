@@ -10,9 +10,10 @@ over time.
 
 ## Installation
 The dependencies for this program are all bundled in `./pom.xml` and therefore will automatically
-be downloaded; you do need to have Maven installed on you machine. Running `mvn package` from
-project root should be enough to install the program in `./target`.
+be downloaded; you only need to have Maven installed on you machine. Running `mvn package` from
+project root should be enough to install the program under `./target`.
 
+## Running the program
 The program expects two parameters, reference and query read in FASTA file format
 (provided FASTA files should not contain any comments).
 
@@ -23,4 +24,19 @@ java -jar ./target/bioinf-1.0-SNAPSHOT.jar [reference.fa] [query.fa]
 
 If everything goes well, read data should be output to `./query.fa-out.txt` (note that the FASTA
 file name is suffixed by `out.txt`.
+
+## Testing
+If you would like to run a sample test of the functionality, under `./helpers` there are two
+simple bash scripts; you can first generate queries using `simulate.sh` like so:
+```
+./helpers/simulate.sh read
+```
+
+This will create sample queries under `./genomes/clostridium/queries`. You can test the program
+(after it's been built using `mvn package`) on every one of them by running:
+```
+./helpers/run.sh
+```
+
+This will produce outputs in the root directory.
 
