@@ -1,18 +1,16 @@
 #!/bin/bash
-# simulate reads using WGSIM.
-# @param 1: output filename
+# run program on simulated reads
 
 DIRECTORY=$(dirname $0)
-BASEDIR="$DIRECTORY/../genomes/clostridium"
-QUERIES="$BASEDIR/queries"
-#i=5
-#LOC="${QUERIES}/$1-${i}-1.fq.fa"
-#Q="$BASEDIR/_clostridium_cellulosi.DG5.dna.toplevel.fa"
+BASEDIR="$DIRECTORY/.."
 
-REFERENCE="$BASEDIR/_clostridium_cellulosi.DG5.dna.toplevel.fa"
+DATADIR="$BASEDIR/genomes/clostridium"
+QUERIES="$DATADIR/queries"
+
+REFERENCE="$DATADIR/_clostridium_cellulosi.DG5.dna.toplevel.fa"
 
 for query in $(ls ${QUERIES} | grep .fa$); do
   echo "Mapping $query..."
-  ${DIRECTORY}../target/bioinf-1.0-SNAPSHOT.jar ${REFERENCE} ${query}
+  java -jar "${BASEDIR}/target/bioinf-1.0-SNAPSHOT.jar" "${REFERENCE}" "$QUERIES/${query}"
 done
 
