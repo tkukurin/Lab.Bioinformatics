@@ -104,7 +104,6 @@ public class Main {
         KmerSequenceGenerator kmerGenerator = queryEntryOptional.get();
 
         // 4.3. "to maximize effectiveness of the filter, we set sketch size s = |W_h(A)|
-//        List<Hash> queryHashes = extractHashes(kmerGenerator);
         List<MinimizerValue> queryHashes = minimizer.minimize(kmerGenerator);
         Set<Hash> uniqueHashes = queryHashes.stream().map(MinimizerValue::getValue)
             .collect(Collectors.toSet());
@@ -116,7 +115,7 @@ public class Main {
         List<CandidateRegion> candidateRegions =
             readMapper.collectCandidateRegions(uniqueHashes, inverse);
 
-        readMapper.findMostLikelyMatch(referenceMinimizers, candidateRegions)
+        readMapper.findMostLikelyMatch(referenceMinimizers, queryHashes, null, candidateRegions)
             .ifPresent(result -> {
               out.print(kmerGenerator.getHeader());
               out.println(String.format(" %s | %s", result.getIndex(), result.getNucIdentity()));

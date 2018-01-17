@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
-import java.util.TreeSet;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
@@ -35,17 +34,6 @@ public class ReadMapper {
 
     private int low;
     private int high;
-  }
-
-  /**
-   * Tuple consisting of (index of estimate, Jaccard estimate) values.
-   */
-  @Value
-  @ToString
-  public static class IndexJaccardPair {
-
-    private int index;
-    private double jaccardEstimate;
   }
 
   /**
@@ -112,13 +100,16 @@ public class ReadMapper {
 
   /**
    * Final step in the mapping, finds best match.
-   * @param reference Minimizer values collected from reference read.
+   * @param reference Minimizer values collected from reference read (sorted ascending by index).
+   * @param query Minimizer values collected from the query (sorted ascending by index).
    * @param candidateRegions Candidate regions obtained from
    *  {@link #collectCandidateRegions(Set, Map)}
    * @return Best estimated match.
    */
   public Optional<ReadMapperResult> findMostLikelyMatch(
       List<MinimizerValue> reference,
+      List<MinimizerValue> query,
+      Set<Hash> queryHashes,
       List<CandidateRegion> candidateRegions) {
     int index = -1;
     int maxMinimizers = 0;
@@ -127,40 +118,49 @@ public class ReadMapper {
       int windowStart = candidateRegion.getLow();
       int windowEnd = windowStart + parameterSupplier.getQueryLength();
 
-      // TODO possibly a treemap
-      Iterator<MinimizerValue> minimizerIterator = getMinimizerIterator(reference, windowStart);
-      TreeSet<MinimizerValue> minimizers = new TreeSet<>(
-          Comparator.comparingInt(MinimizerValue::getOriginalIndex));
+      SketchMap sketchMap = new SketchMap(query);
+//      Iterator<MinimizerValue> minimizerIterator = iteratorFrom(reference, windowStart);
+      List<MinimizerValue> minimizers = reference;
+//          getMinimizers(reference, windowStart,
+//          reference.get(reference.size() - 1).getOriginalIndex()); // TODO
+      int minimizersStart = binaryFindIndexOfFirstGteValue(
+          reference, MinimizerValue::getOriginalIndex, windowStart);
+      int minimizersEnd = binaryFindIndexOfFirstGteValue(
+          reference, MinimizerValue::getOriginalIndex, windowEnd);
 
-      MinimizerValue nextMinimizer = null;
-      while (minimizerIterator.hasNext()) {
-        nextMinimizer = minimizerIterator.next();
-
-        if (nextMinimizer.getOriginalIndex() >= windowEnd) {
-          break;
-        }
-
-        minimizers.add(nextMinimizer);
-      }
+//      MinimizerValue nextMinimizer = null;
+//      while (minimizerIterator.hasNext()) {
+//        nextMinimizer = minimizerIterator.next();
+//
+//        if (nextMinimizer.getOriginalIndex() >= windowEnd) {
+//          break;
+//        }
+//
+//        sketchMap.putReference(nextMinimizer);
+//      }
 
       while(windowStart <= candidateRegion.getHigh()) {
-        if (!minimizers.isEmpty() && minimizers.first().getOriginalIndex() <= windowStart) {
-          minimizers.pollFirst();
+        if (minimizersStart < minimizers.size()
+            && minimizers.get(minimizersStart).getOriginalIndex() <= windowStart) {
+          sketchMap.removeReference(minimizers.get(minimizersStart));
+          minimizersStart++;
         }
 
-        if (minimizerIterator.hasNext() && nextMinimizer != null) {
-          minimizers.add(nextMinimizer);
-          nextMinimizer = minimizerIterator.next();
+        if (minimizersEnd < minimizers.size()
+            && minimizers.get(minimizersEnd).getOriginalIndex() <= windowEnd) {
+          sketchMap.putReference(minimizers.get(minimizersEnd));
+          minimizersEnd++;
         }
 
-        if (minimizers.size() > maxMinimizers) {
+        int sharedMinimizers = sketchMap.getSharedMinimizers(parameterSupplier.getSketchSize());
+        if (sharedMinimizers > maxMinimizers) {
           index = windowStart;
-          maxMinimizers = minimizers.size();
+          maxMinimizers = sharedMinimizers;
         }
 
-        int skip = minimizers.first().getOriginalIndex() - windowStart;
-        if (nextMinimizer != null) {
-          skip = Math.min(skip, nextMinimizer.getOriginalIndex() - windowEnd + 1);
+        int skip = minimizers.get(minimizersStart).getOriginalIndex() - windowStart;
+        if (minimizersEnd < minimizers.size()) {
+          skip = Math.min(skip, minimizers.get(minimizersEnd).getOriginalIndex() - windowEnd + 1);
         }
 
         windowStart += skip;
@@ -175,7 +175,7 @@ public class ReadMapper {
         : Optional.of(StatUtils.toMapperResult(index, jaccard, kmerSize));
   }
 
-  private Iterator<MinimizerValue> getMinimizerIterator(
+  private Iterator<MinimizerValue> iteratorFrom(
     List<MinimizerValue> reference, int lowInclusive) {
     int i = binaryFindIndexOfFirstGteValue(
         reference, MinimizerValue::getOriginalIndex, lowInclusive);
