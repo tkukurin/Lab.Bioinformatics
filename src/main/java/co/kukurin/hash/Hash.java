@@ -4,7 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 /**
- * Obtains k-mer hashes for string reads.
+ * Hahcode abstraction.
  */
 @EqualsAndHashCode
 public class Hash implements Comparable<Hash> {

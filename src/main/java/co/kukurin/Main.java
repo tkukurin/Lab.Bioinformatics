@@ -12,6 +12,7 @@ import co.kukurin.benchmark.CompositeDummyBenchmark;
 import co.kukurin.benchmark.PrintStreamBenchmark;
 import co.kukurin.fasta.FastaKmerBufferedReader;
 import co.kukurin.fasta.FastaKmerBufferedReader.KmerSequenceGenerator;
+import co.kukurin.stat.StatUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.HashFunction;
@@ -60,32 +61,21 @@ public class Main {
     String queryPath = Paths.get(queryFilename).getFileName().toString();
     ConstantParameters constantParameters =
         ConstantParameters.builder()
-            // set identical parameters as current impl of MashMap does
             .windowSize(90)
             .kmerSize(16)
-            // tau = G(e_max, k) - delta
-            // e_max = 0.15
-            // delta ~= 0.01
-            .tau(0.035)
+            .tau(StatUtils.mashToJaccard(0.15, 16) - 0.015)
             .build();
 
-    logger.info("Mapping" + queryPath);
+    logger.info("Mapping " + queryPath);
     String outputFile = queryPath + "-out.txt";
     String benchmarkFile = queryPath + "-benchmark.txt";
     try (PrintStream out = new PrintStream(new FileOutputStream(outputFile));
          FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
             new FileReader(referenceFilename), constantParameters.getKmerSize());
          FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
-            new FileReader(queryFilename), constantParameters.getKmerSize());
-         PrintStream benchmarkOut = new PrintStream(new FileOutputStream(benchmarkFile))) {
+            new FileReader(queryFilename), constantParameters.getKmerSize())) {
 
       long startTime = System.currentTimeMillis();
-      PrintStreamBenchmark timeBenchmark = new PrintStreamBenchmark("Runtime",
-          () -> String.format("%.2f s", (System.currentTimeMillis() - startTime) / 1000.0));
-      Timer benchmarkTimer = new Timer("BenchmarkTimer", true);
-      benchmarkTimer.scheduleAtFixedRate(
-          getBenchmarks(benchmarkOut), TimeUnit.SECONDS.toMillis(0), TimeUnit.SECONDS.toMillis(1));
-
       Minimizer minimizer = new Minimizer(constantParameters.getWindowSize());
 
       // retain reference minimizers for efficient computation of W(B_i)
@@ -97,8 +87,6 @@ public class Main {
       // "further, to enable O(1) lookup of all the occurences of a particular minimizer's
       // hashed value h, we laso replicate W(B) as a hash table H.
       Map<Hash, Collection<Integer>> inverse = inverse(referenceMinimizers);
-
-      logger.info("Mapped reference");
 
       for (Optional<KmerSequenceGenerator> queryEntryOptional = queryReader.next();
           queryEntryOptional.isPresent();
@@ -127,7 +115,7 @@ public class Main {
             });
       }
 
-      timeBenchmark.log(benchmarkOut);
+      logger.info("Runtime: " + (System.currentTimeMillis() - startTime) / 1000.0);
     } catch (Exception e) {
       System.out.println("ERROR executing program:");
       System.out.println(e.getLocalizedMessage());
@@ -150,14 +138,7 @@ public class Main {
       long usedInBytes = runtime.totalMemory() - runtime.freeMemory();
       return String.format("%.2f Mb", usedInBytes / (1_024.0 * 1_024.0));
     });
-
-    MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
-    OperatingSystemMXBean osMBean = ManagementFactory.newPlatformMXBeanProxy(
-        mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
-    PrintStreamBenchmark cpuBenchmark = new PrintStreamBenchmark("Cpu", () ->
-        String.format("%.2f", osMBean.getProcessCpuLoad()));
-
-    return new CompositeBenchmarkImpl(outStream, cpuBenchmark, memoryBenchmark);
+    return new CompositeBenchmarkImpl(outStream, memoryBenchmark);
   }
 
   private static Map<Hash, Collection<Integer>> inverse(List<MinimizerValue> indexHash) {

@@ -10,7 +10,7 @@ public class ParameterSupplier {
   /** Container for algorithm parameters unaffected by query details. */
   @Builder
   @Getter
-  static class ConstantParameters {
+  public static class ConstantParameters {
 
     private int windowSize;
     private int kmerSize;
