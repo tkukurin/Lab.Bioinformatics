@@ -1,13 +1,12 @@
 package co.kukurin.map;
 
-import co.kukurin.hash.Minimizer.MinimizerValue;
 import co.kukurin.ParameterSupplier;
 import co.kukurin.hash.Hash;
+import co.kukurin.hash.Minimizer.MinimizerValue;
 import co.kukurin.stat.StatUtils;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,8 +52,8 @@ public class ReadMapper {
 
   /**
    * @param queryHashes Hashes obtained from query read.
-   * @param hashToReferenceReadIndices map [hash value -> list of indices where the hash is found
-   *  in the reference read]
+   * @param hashToReferenceReadIndices map [hash value -> list of indices where the hash is found in
+   * the reference read]
    * @return candidate regions which are estimated to evaluate to desired Jaccard values.
    */
   public List<CandidateRegion> collectCandidateRegions(
@@ -100,10 +99,11 @@ public class ReadMapper {
 
   /**
    * Final step in the mapping, finds best match.
+   *
    * @param reference Minimizer values collected from reference read (sorted ascending by index).
    * @param query Minimizer values collected from the query (sorted ascending by index).
-   * @param candidateRegions Candidate regions obtained from
-   *  {@link #collectCandidateRegions(Set, Map)}
+   * @param candidateRegions Candidate regions obtained from {@link #collectCandidateRegions(Set,
+   * Map)}
    * @return Best estimated match.
    */
   public Optional<ReadMapperResult> findMostLikelyMatch(
@@ -126,7 +126,7 @@ public class ReadMapper {
       int minimizersEndIndex = binaryFindIndexOfFirstGteValue(
           reference, MinimizerValue::getOriginalIndex, windowEnd);
 
-      while(windowStart <= candidateRegion.getHigh()) {
+      while (windowStart <= candidateRegion.getHigh()) {
         // throw out values leaving window
         if (minimizersStartIndex < reference.size()
             && reference.get(minimizersStartIndex).getOriginalIndex() <= windowStart) {
@@ -160,7 +160,7 @@ public class ReadMapper {
 
     int kmerSize = parameterSupplier.getConstantParameters().getKmerSize();
     double jaccard = (1.0 * maxMinimizers) / parameterSupplier.getSketchSize();
-    return index == - 1
+    return index == -1
         ? Optional.empty()
         : Optional.of(StatUtils.toMapperResult(index, jaccard, kmerSize));
   }

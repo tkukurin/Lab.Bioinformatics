@@ -44,10 +44,10 @@ public class Minimizer {
   private final int windowSize;
 
   /**
-   * @param  generator A k-mer generator.
+   * @param generator A k-mer generator.
    * @return List of minimizer values, whose index distance is at most (windowSize - 1). A minimizer
-   * is defined to be a hash with smallest hash or (in case of hash equality) largest index within
-   * a window.
+   * is defined to be a hash with smallest hash or (in case of hash equality) largest index within a
+   * window.
    */
   public List<MinimizerValue> minimize(KmerSequenceGenerator generator) throws IOException {
     Deque<MinimizerValue> deque = new ArrayDeque<>(windowSize);

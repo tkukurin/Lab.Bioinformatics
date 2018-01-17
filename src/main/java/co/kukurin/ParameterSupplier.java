@@ -3,11 +3,15 @@ package co.kukurin;
 import lombok.Builder;
 import lombok.Getter;
 
-/** Container for algorithm parameter values. */
+/**
+ * Container for algorithm parameter values.
+ */
 @Getter
 public class ParameterSupplier {
 
-  /** Container for algorithm parameters unaffected by query details. */
+  /**
+   * Container for algorithm parameters unaffected by query details.
+   */
   @Builder
   @Getter
   public static class ConstantParameters {

@@ -53,9 +53,9 @@ public class Main {
     logger.info("Mapping " + queryFilename);
     String outputFile = queryFilename + "-out.txt";
     try (PrintStream out = new PrintStream(new FileOutputStream(outputFile));
-         FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
+        FastaKmerBufferedReader referenceReader = new FastaKmerBufferedReader(
             new FileReader(referenceFilename), constantParameters.getKmerSize());
-         FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
+        FastaKmerBufferedReader queryReader = new FastaKmerBufferedReader(
             new FileReader(queryFilename), constantParameters.getKmerSize())) {
 
       long startTime = System.currentTimeMillis();

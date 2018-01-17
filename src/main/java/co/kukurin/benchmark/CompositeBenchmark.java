@@ -13,7 +13,7 @@ public abstract class CompositeBenchmark extends TimerTask {
   final PrintStream out;
   final List<Benchmark> benchmarkList;
 
-  public CompositeBenchmark(PrintStream out, PrintStreamBenchmark ... benchmarks) {
+  public CompositeBenchmark(PrintStream out, PrintStreamBenchmark... benchmarks) {
     this.benchmarkList = Arrays.asList(benchmarks);
     this.out = out;
   }

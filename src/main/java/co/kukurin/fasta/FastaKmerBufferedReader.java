@@ -12,8 +12,8 @@ import lombok.Getter;
 /**
  * Buffered reader for efficient reading of k-mers from a file.
  *
- * <p>Reader returns {@link KmerSequenceGenerator} instances on each new invocation of the
- * {@link #next()} method.
+ * <p>Reader returns {@link KmerSequenceGenerator} instances on each new invocation of the {@link
+ * #next()} method.
  */
 public class FastaKmerBufferedReader implements AutoCloseable {
 
@@ -30,16 +30,13 @@ public class FastaKmerBufferedReader implements AutoCloseable {
   };
 
   /**
-   * Generator of k-mer sequences from {@link FastaKmerBufferedReader}'s internal
-   * {@link BufferedReader}. E.g. for a sequence read "AAT" and k-mer size of 2, this generator
-   * will return iterators over the following characters:
+   * Generator of k-mer sequences from {@link FastaKmerBufferedReader}'s internal {@link
+   * BufferedReader}. E.g. for a sequence read "AAT" and k-mer size of 2, this generator will return
+   * iterators over the following characters:
    *
-   * <ol>
-   *   <li>(A, A)</li>
-   *   <li>(A, T)</li>
-   * </ol>
+   * <ol> <li>(A, A)</li> <li>(A, T)</li> </ol>
    */
-   public class KmerSequenceGenerator {
+  public class KmerSequenceGenerator {
 
     @Getter
     private String header;
@@ -54,8 +51,8 @@ public class FastaKmerBufferedReader implements AutoCloseable {
     }
 
     /**
-     * @return next k-mer from read sequence. If there are no more k-mers to be read, will
-     * return iterator that always returns false to hasNext calls.
+     * @return next k-mer from read sequence. If there are no more k-mers to be read, will return
+     * iterator that always returns false to hasNext calls.
      */
     public Iterator<Character> readNext() throws IOException {
       int readValue = nextNonWhitespace();
@@ -124,11 +121,11 @@ public class FastaKmerBufferedReader implements AutoCloseable {
   }
 
   /**
-   * @return next {@link KmerSequenceGenerator} instance. Will read a header line and return
-   * a {@link KmerSequenceGenerator} which reads k-mers in a streaming fashion from the source.
+   * @return next {@link KmerSequenceGenerator} instance. Will read a header line and return a
+   * {@link KmerSequenceGenerator} which reads k-mers in a streaming fashion from the source.
    *
-   * <p>The returned {@link KmerSequenceGenerator} instance must be exhausted before calling
-   * {@link #next()} a second time, otherwise behavior is undefined.
+   * <p>The returned {@link KmerSequenceGenerator} instance must be exhausted before calling {@link
+   * #next()} a second time, otherwise behavior is undefined.
    */
   public Optional<KmerSequenceGenerator> next() {
     try {
